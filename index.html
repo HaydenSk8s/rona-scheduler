@@ -6,6 +6,7 @@
     <title>Employee Schedule Planner</title>
     <!-- Week navigation controls -->
     <link rel="stylesheet" href="style.css?v=2">
+    <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <!-- Password Protection Screen -->
@@ -89,30 +90,8 @@
     </div>
     <script src="script.js"></script>
 <script>
-const images = [
-  "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1500&q=80",
-  "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1500&q=80",
-  "https://images.unsplash.com/photo-1618219908412-a29a1bb7b86e?auto=format&fit=crop&w=1500&q=80",
-  "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1500&q=80",
-  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1500&q=80",
-  "https://images.unsplash.com/photo-1460518451285-97b6aa326961?auto=format&fit=crop&w=1500&q=80",
-  "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1500&q=80"
-];
-const slideshow = document.querySelector('.background-slideshow');
-images.forEach((img, i) => {
-  const div = document.createElement('div');
-  div.className = 'slide';
-  div.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.35),rgba(0,0,0,0.35)), url('${img}')`;
-  if (i === 0) div.classList.add('active');
-  slideshow.appendChild(div);
-});
-let idx = 0;
-setInterval(() => {
-  const slides = document.querySelectorAll('.background-slideshow .slide');
-  slides[idx].classList.remove('active');
-  idx = (idx + 1) % slides.length;
-  slides[idx].classList.add('active');
-}, 4500);
+// Initial emoji parse after Twemoji loads
+renderEmojis();
 </script>
 </body>
 </html>

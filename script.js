@@ -1,3 +1,10 @@
+// --- Emoji Rendering ---
+function renderEmojis() {
+  if (window.twemoji) {
+    twemoji.parse(document.body);
+  }
+}
+
 // --- Password Protection ---
 const SITE_PASSWORD = 'rona2025'; // Change this to your desired password
 
@@ -101,6 +108,8 @@ function initializeApp() {
     renderPrintPreview();
     updateWeekRangeLabel();
     updatePrevButtonState();
+    // Re-render emojis after all content is loaded
+    renderEmojis();
   });
 
   // Week navigation arrows
@@ -125,6 +134,8 @@ function initializeApp() {
         renderPrintPreview();
         updateWeekRangeLabel();
         updatePrevButtonState();
+        // Re-render emojis after navigation
+        renderEmojis();
       });
     });
   }
@@ -145,6 +156,8 @@ function initializeApp() {
         renderPrintPreview();
         updateWeekRangeLabel();
         updatePrevButtonState();
+        // Re-render emojis after navigation
+        renderEmojis();
       });
     });
   }
@@ -162,6 +175,8 @@ function initializeApp() {
     highlightCoverage();
     renderPrintPreview();
     window.scrollTo(window.scrollX, scrollY);
+    // Re-render emojis after adding employee
+    renderEmojis();
   });
   // Print button logic
   document.getElementById('print-btn').addEventListener('click', () => {
@@ -185,6 +200,8 @@ function initializeApp() {
     renderPrintPreview();
     updateWeekRangeLabel();
     updatePrevButtonState();
+    // Re-render emojis after saving
+    renderEmojis();
   });
   document.getElementById('cancel-edit-btn').addEventListener('click', () => {
     // Revert to last saved state
@@ -198,6 +215,8 @@ function initializeApp() {
       renderPrintPreview();
       updateWeekRangeLabel();
       updatePrevButtonState();
+      // Re-render emojis after canceling edit
+      renderEmojis();
     });
   });
 }
@@ -249,6 +268,8 @@ function createScheduleTable() {
       if (!isEditMode) return;
       emp.employmentType = e.target.value;
       createScheduleTable();
+      // Re-render emojis after employment type change
+      renderEmojis();
     });
     empTypeLabel.appendChild(empTypeSelect);
     empTypeDiv.appendChild(empTypeLabel);
@@ -272,6 +293,8 @@ function createScheduleTable() {
       checkUnderstaffed();
       checkAvailabilityConflicts();
       highlightCoverage();
+      // Re-render emojis after name change
+      renderEmojis();
     });
     nameInput.addEventListener('input', e => {
       if (!isEditMode) return;
@@ -291,6 +314,8 @@ function createScheduleTable() {
         const scrollY = window.scrollY;
         createScheduleTable();
         window.scrollTo(window.scrollX, scrollY);
+        // Re-render emojis after opening availability modal
+        renderEmojis();
       }
     });
     nameTd.appendChild(availBtn);
@@ -310,6 +335,8 @@ function createScheduleTable() {
       checkAvailabilityConflicts();
       highlightCoverage();
       saveEmployees();
+      // Re-render emojis after removing employee
+      renderEmojis();
     });
     nameTd.appendChild(removeBtn);
     tr.appendChild(nameTd);
@@ -806,6 +833,8 @@ function handleScheduleChange() {
   if (isEditMode) {
     showNotesSummary();
   }
+  // Re-render emojis after schedule changes
+  renderEmojis();
   // Removed saveData() from here
 }
 
@@ -928,6 +957,8 @@ async function loadData() {
     updateWeekRangeLabel();
     updatePrevButtonState();
     checkUnderstaffed(); // Always recalculate warnings for the current week
+    // Re-render emojis after loading data
+    renderEmojis();
   } catch (err) {
     showStatus('Failed to load data from server.', true);
     console.error('[DEBUG] Load error:', err);
@@ -1166,6 +1197,8 @@ function setEditMode(editing) {
     hideNotesSummary();
   }
   createScheduleTable();
+  // Re-render emojis after edit mode change
+  renderEmojis();
 }
 
 function getActiveEmployees() {
