@@ -1,3 +1,207 @@
+// --- Password Protection ---
+const SITE_PASSWORD = 'rona2024'; // Change this to your desired password
+
+// Check if user is already authenticated
+function checkAuthentication() {
+  if (sessionStorage.getItem('authenticated') === 'true') {
+    showMainContent();
+  } else {
+    showPasswordScreen();
+  }
+}
+
+// Show password screen
+function showPasswordScreen() {
+  document.getElementById('password-screen').style.display = 'flex';
+  document.getElementById('main-content').style.display = 'none';
+  
+  // Focus on password input
+  document.getElementById('password-input').focus();
+  
+  // Handle Enter key
+  document.getElementById('password-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      checkPassword();
+    }
+  });
+  
+  // Handle login button
+  document.getElementById('login-btn').addEventListener('click', checkPassword);
+}
+
+// Check password
+function checkPassword() {
+  const password = document.getElementById('password-input').value;
+  const errorDiv = document.getElementById('password-error');
+  
+  if (password === SITE_PASSWORD) {
+    sessionStorage.setItem('authenticated', 'true');
+    showMainContent();
+  } else {
+    errorDiv.style.display = 'block';
+    document.getElementById('password-input').value = '';
+    document.getElementById('password-input').focus();
+  }
+}
+
+// Show main content
+function showMainContent() {
+  document.getElementById('password-screen').style.display = 'none';
+  document.getElementById('main-content').style.display = 'block';
+  initializeApp();
+}
+
+// Initialize the app (moved from global scope)
+function initializeApp() {
+  // Department switcher setup
+  const deptSelect = document.getElementById('department-switcher');
+  if (deptSelect) {
+    deptSelect.value = getCurrentDepartment();
+    deptSelect.addEventListener('change', (e) => {
+      setCurrentDepartment(e.target.value);
+      location.reload(); // For now, reload to re-init everything for the new department
+    });
+  }
+  // Ensure not in edit mode on initial load
+  setEditMode(false);
+  // Debug: Log key dates
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  console.log('[DEBUG] Today:', today.toISOString().slice(0,10));
+  console.log('[DEBUG] Initial weekStartDate:', weekStartDate);
+  console.log('[DEBUG] getCurrentSundayISO():', getCurrentSundayISO());
+
+  // On initial load, ensure weekStartDate is not in the past (do this FIRST)
+  if (isWeekInPast(weekStartDate)) {
+    weekStartDate = getCurrentSundayISO();
+    console.log('[DEBUG] weekStartDate updated to current Sunday:', weekStartDate);
+  }
+
+  // Remove any schedule data before MIN_WEEK from the database on initial load
+  fetch(`${API_BASE}/api/schedule/weeks?department=${encodeURIComponent(getCurrentDepartment())}`).then(res => res.json()).then(weeks => {
+    weeks.forEach(week => {
+      if (week < MIN_WEEK) {
+        fetch(`${API_BASE}/api/schedule?week=${week}&department=${encodeURIComponent(getCurrentDepartment())}`, { method: 'DELETE' });
+      }
+    });
+  });
+
+  // Clear UI before loading
+  document.getElementById('schedule-body').innerHTML = '';
+  document.getElementById('print-preview').innerHTML = '';
+  document.getElementById('warnings').innerHTML = '';
+
+  cleanupOldWeeks().then(async () => {
+    await loadEmployees();
+    await loadAvailability(); // <-- Ensure availability is loaded before schedule data
+    await loadData();
+    createScheduleTable();
+    updateSummary();
+    highlightCoverage();
+    renderPrintPreview();
+    updateWeekRangeLabel();
+    updatePrevButtonState();
+  });
+
+  // Week navigation arrows
+  const prevBtn = document.getElementById('prev-week-btn');
+  const nextBtn = document.getElementById('next-week-btn');
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+      setEditMode(false);
+      let d = new Date(weekStartDate);
+      d.setDate(d.getDate() - 7);
+      weekStartDate = d.toISOString().slice(0,10);
+      if (isWeekInPast(weekStartDate)) {
+        updatePrevButtonState();
+        prevBtn.classList.add('shake');
+        setTimeout(() => prevBtn.classList.remove('shake'), 400);
+        return;
+      }
+      loadData().then(() => {
+        createScheduleTable();
+        updateSummary();
+        highlightCoverage();
+        renderPrintPreview();
+        updateWeekRangeLabel();
+        updatePrevButtonState();
+      });
+    });
+  }
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      setEditMode(false);
+      let d = new Date(weekStartDate);
+      d.setDate(d.getDate() + 7);
+      weekStartDate = d.toISOString().slice(0,10);
+      const minWeek = MIN_WEEK;
+      if (weekStartDate < minWeek) {
+        weekStartDate = minWeek;
+      }
+      loadData().then(() => {
+        createScheduleTable();
+        updateSummary();
+        highlightCoverage();
+        renderPrintPreview();
+        updateWeekRangeLabel();
+        updatePrevButtonState();
+      });
+    });
+  }
+
+  // Add employee button logic
+  document.getElementById('add-employee-btn').addEventListener('click', () => {
+    if (!isEditMode) return;
+    const newName = '';
+    const newId = generateId();
+    unsavedEmployees.push({ id: newId, name: newName });
+    // Preserve scroll position
+    const scrollY = window.scrollY;
+    createScheduleTable();
+    updateSummary();
+    highlightCoverage();
+    renderPrintPreview();
+    window.scrollTo(window.scrollX, scrollY);
+  });
+  // Print button logic
+  document.getElementById('print-btn').addEventListener('click', () => {
+    window.print();
+  });
+  // Save button logic removed
+
+  // Edit/Save Week Button Logic
+  document.getElementById('edit-week-btn').addEventListener('click', () => {
+    setEditMode(true);
+  });
+  document.getElementById('save-week-btn').addEventListener('click', async () => {
+    applyEditsToEmployees();
+    await saveEmployees();
+    await saveAvailability();
+    setEditMode(false);
+    await saveData();
+    createScheduleTable();
+    updateSummary();
+    highlightCoverage();
+    renderPrintPreview();
+    updateWeekRangeLabel();
+    updatePrevButtonState();
+  });
+  document.getElementById('cancel-edit-btn').addEventListener('click', () => {
+    // Revert to last saved state
+    unsavedEmployees = [];
+    setEditMode(false);
+    // Reload data from server to ensure we have the last saved state
+    loadData().then(() => {
+      createScheduleTable();
+      updateSummary();
+      highlightCoverage();
+      renderPrintPreview();
+      updateWeekRangeLabel();
+      updatePrevButtonState();
+    });
+  });
+}
+
 // --- Example Data ---
 const employees = [];
 let weekStartDate = getCurrentSundayISO(); // Always start with the current week
@@ -1003,154 +1207,9 @@ function setCurrentDepartment(dept) {
   localStorage.setItem('rona_department', dept);
 }
 
+// Start the application with password protection
 document.addEventListener('DOMContentLoaded', () => {
-  // Department switcher setup
-  const deptSelect = document.getElementById('department-switcher');
-  if (deptSelect) {
-    deptSelect.value = getCurrentDepartment();
-    deptSelect.addEventListener('change', (e) => {
-      setCurrentDepartment(e.target.value);
-      location.reload(); // For now, reload to re-init everything for the new department
-    });
-  }
-  // Ensure not in edit mode on initial load
-  setEditMode(false);
-  // Debug: Log key dates
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  console.log('[DEBUG] Today:', today.toISOString().slice(0,10));
-  console.log('[DEBUG] Initial weekStartDate:', weekStartDate);
-  console.log('[DEBUG] getCurrentSundayISO():', getCurrentSundayISO());
-
-  // On initial load, ensure weekStartDate is not in the past (do this FIRST)
-  if (isWeekInPast(weekStartDate)) {
-    weekStartDate = getCurrentSundayISO();
-    console.log('[DEBUG] weekStartDate updated to current Sunday:', weekStartDate);
-  }
-
-  // Remove any schedule data before MIN_WEEK from the database on initial load
-  fetch(`${API_BASE}/api/schedule/weeks?department=${encodeURIComponent(getCurrentDepartment())}`).then(res => res.json()).then(weeks => {
-    weeks.forEach(week => {
-      if (week < MIN_WEEK) {
-        fetch(`${API_BASE}/api/schedule?week=${week}&department=${encodeURIComponent(getCurrentDepartment())}`, { method: 'DELETE' });
-      }
-    });
-  });
-
-  // Clear UI before loading
-  document.getElementById('schedule-body').innerHTML = '';
-  document.getElementById('print-preview').innerHTML = '';
-  document.getElementById('warnings').innerHTML = '';
-
-  cleanupOldWeeks().then(async () => {
-    await loadEmployees();
-    await loadAvailability(); // <-- Ensure availability is loaded before schedule data
-    await loadData();
-    createScheduleTable();
-    updateSummary();
-    highlightCoverage();
-    renderPrintPreview();
-    updateWeekRangeLabel();
-    updatePrevButtonState();
-  });
-
-  // Week navigation arrows
-  const prevBtn = document.getElementById('prev-week-btn');
-  const nextBtn = document.getElementById('next-week-btn');
-  if (prevBtn) {
-    prevBtn.addEventListener('click', () => {
-      setEditMode(false);
-      let d = new Date(weekStartDate);
-      d.setDate(d.getDate() - 7);
-      weekStartDate = d.toISOString().slice(0,10);
-      if (isWeekInPast(weekStartDate)) {
-        updatePrevButtonState();
-        prevBtn.classList.add('shake');
-        setTimeout(() => prevBtn.classList.remove('shake'), 400);
-        return;
-      }
-      loadData().then(() => {
-        createScheduleTable();
-        updateSummary();
-        highlightCoverage();
-        renderPrintPreview();
-        updateWeekRangeLabel();
-        updatePrevButtonState();
-      });
-    });
-  }
-  if (nextBtn) {
-    nextBtn.addEventListener('click', () => {
-      setEditMode(false);
-      let d = new Date(weekStartDate);
-      d.setDate(d.getDate() + 7);
-      weekStartDate = d.toISOString().slice(0,10);
-      const minWeek = MIN_WEEK;
-      if (weekStartDate < minWeek) {
-        weekStartDate = minWeek;
-      }
-      loadData().then(() => {
-        createScheduleTable();
-        updateSummary();
-        highlightCoverage();
-        renderPrintPreview();
-        updateWeekRangeLabel();
-        updatePrevButtonState();
-      });
-    });
-  }
-
-  // Add employee button logic
-  document.getElementById('add-employee-btn').addEventListener('click', () => {
-    if (!isEditMode) return;
-    const newName = '';
-    const newId = generateId();
-    unsavedEmployees.push({ id: newId, name: newName });
-    // Preserve scroll position
-    const scrollY = window.scrollY;
-    createScheduleTable();
-    updateSummary();
-    highlightCoverage();
-    renderPrintPreview();
-    window.scrollTo(window.scrollX, scrollY);
-  });
-  // Print button logic
-  document.getElementById('print-btn').addEventListener('click', () => {
-    window.print();
-  });
-  // Save button logic removed
-
-  // Edit/Save Week Button Logic
-  document.getElementById('edit-week-btn').addEventListener('click', () => {
-    setEditMode(true);
-  });
-  document.getElementById('save-week-btn').addEventListener('click', async () => {
-    applyEditsToEmployees();
-    await saveEmployees();
-    await saveAvailability();
-    setEditMode(false);
-    await saveData();
-    createScheduleTable();
-    updateSummary();
-    highlightCoverage();
-    renderPrintPreview();
-    updateWeekRangeLabel();
-    updatePrevButtonState();
-  });
-  document.getElementById('cancel-edit-btn').addEventListener('click', () => {
-    // Revert to last saved state
-    unsavedEmployees = [];
-    setEditMode(false);
-    // Reload data from server to ensure we have the last saved state
-    loadData().then(() => {
-      createScheduleTable();
-      updateSummary();
-      highlightCoverage();
-      renderPrintPreview();
-      updateWeekRangeLabel();
-      updatePrevButtonState();
-    });
-  });
+  checkAuthentication();
 });
 
 // --- Summary Row ---
