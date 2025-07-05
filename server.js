@@ -248,10 +248,7 @@ app.post('/api/employees', async (req, res) => {
   }
 });
 
-// Add a root route for health check / friendly message
-app.get('/', (req, res) => {
-  res.send('<h2>Rona Scheduler Backend is running! 🚦</h2><p>API endpoints are available at /api/...</p>');
-});
+// Static file serving will automatically serve index.html for the root route
 
 app.listen(PORT, () => {
   console.log(`Scheduler backend running on port ${PORT}`);
