@@ -72,7 +72,7 @@ app.get('/api/schedule', async (req, res) => {
   const week = req.query.week;
   const department = req.query.department || 'customer_service';
   if (!week) return res.status(400).json({ error: 'Missing week parameter' });
-  
+
   try {
     const { data, error } = await supabase
       .from('schedule')
@@ -84,7 +84,7 @@ app.get('/api/schedule', async (req, res) => {
     if (error && error.code !== 'PGRST116') {
       return res.status(500).json({error: error.message});
     }
-    
+
     res.json(data ? JSON.parse(data.data) : { schedules: {}, weekStartDate: week });
   } catch (error) {
     res.status(500).json({error: error.message});
@@ -96,9 +96,9 @@ app.post('/api/schedule', async (req, res) => {
   const { weekStartDate, schedules, department } = req.body;
   const dept = department || 'customer_service';
   if (!weekStartDate) return res.status(400).json({ error: 'Missing weekStartDate' });
-  
+
   const data = JSON.stringify({ schedules, weekStartDate });
-  
+
   try {
     const { error } = await supabase
       .from('schedule')

@@ -958,63 +958,20 @@ async function saveEmployees() {
   }
 }
 
-async function loadData() {
-  // Ensure weekStartDate is never before MIN_WEEK
-  if (!weekStartDate || weekStartDate < MIN_WEEK) {
-    weekStartDate = MIN_WEEK;
-    console.log('[DEBUG] loadData forced weekStartDate to MIN_WEEK:', weekStartDate);
-  }
-  try {
-    // Clear warnings before loading new data
-    document.getElementById('warnings').innerHTML = '';
-    console.log('[DEBUG] Loading data for week:', weekStartDate);
-    const res = await fetch(`${API_BASE}/api/schedule?week=${weekStartDate}&department=${encodeURIComponent(getCurrentDepartment())}`);
-    const schedData = await res.json();
-    console.log('[DEBUG] Data received from backend:', JSON.stringify(schedData));
-    // Clear schedule and specialDays for all employees (week-specific)
-    employees.forEach(emp => {
-      emp.schedule = {};
-      emp.specialDays = {};
-      emp.notes = {}; // Clear notes for all employees
-    });
-    // Restore per-week schedule/specialDays if present
-    if (schedData.schedules) {
-      for (const empId in schedData.schedules) {
-        const emp = employees.find(e => e.id === empId);
-        if (emp) {
-          emp.schedule = schedData.schedules[empId].schedule || {};
-          emp.specialDays = schedData.schedules[empId].specialDays || {};
-          emp.notes = schedData.schedules[empId].notes || {}; // Restore notes
-        }
-      }
-    }
-    createScheduleTable();
-    updateSummary();
-    highlightCoverage();
-    renderPrintPreview();
-    updateWeekRangeLabel();
-    updatePrevButtonState();
-    checkUnderstaffed(); // Always recalculate warnings for the current week
-    // Re-render emojis after loading data
-    renderEmojis();
-  } catch (err) {
-    showStatus('Failed to load data from server.', true);
-    console.error('[DEBUG] Load error:', err);
-  }
-}
+// --- Save schedule for a specific week and department ---
 async function saveData() {
   try {
-    // Save only per-week schedule/specialDays
     const schedules = {};
     employees.forEach(emp => {
       schedules[emp.id] = {
         schedule: emp.schedule || {},
         specialDays: emp.specialDays || {},
-        notes: emp.notes || {} // Include notes in the payload
+        notes: emp.notes || {}
       };
     });
     const payload = { weekStartDate, schedules, department: getCurrentDepartment() };
-    console.log('[DEBUG] Payload being sent to backend:', JSON.stringify(payload));
+    lastSavePayload = payload;
+    showDebugPanel(lastSavePayload, lastLoadedData);
     const res = await fetch(`${API_BASE}/api/schedule`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1026,6 +983,50 @@ async function saveData() {
   } catch (err) {
     showStatus('Failed to save data.', true);
     console.error('[DEBUG] Save error:', err);
+  }
+}
+
+// --- Load schedule for a specific week and department ---
+async function loadData() {
+  // Ensure weekStartDate is never before MIN_WEEK
+  if (!weekStartDate || weekStartDate < MIN_WEEK) {
+    weekStartDate = MIN_WEEK;
+    console.log('[DEBUG] loadData forced weekStartDate to MIN_WEEK:', weekStartDate);
+  }
+  try {
+    document.getElementById('warnings').innerHTML = '';
+    console.log('[DEBUG] Loading data for week:', weekStartDate);
+    const res = await fetch(`${API_BASE}/api/schedule?week=${weekStartDate}&department=${encodeURIComponent(getCurrentDepartment())}`);
+    const schedData = await res.json();
+    lastLoadedData = schedData;
+    showDebugPanel(lastSavePayload, lastLoadedData);
+    console.log('[DEBUG] Data received from backend:', JSON.stringify(schedData));
+    employees.forEach(emp => {
+      emp.schedule = {};
+      emp.specialDays = {};
+      emp.notes = {};
+    });
+    if (schedData.schedules) {
+      for (const empId in schedData.schedules) {
+        const emp = employees.find(e => e.id === empId);
+        if (emp) {
+          emp.schedule = schedData.schedules[empId].schedule || {};
+          emp.specialDays = schedData.schedules[empId].specialDays || {};
+          emp.notes = schedData.schedules[empId].notes || {};
+        }
+      }
+    }
+    createScheduleTable();
+    updateSummary();
+    highlightCoverage();
+    renderPrintPreview();
+    updateWeekRangeLabel();
+    updatePrevButtonState();
+    checkUnderstaffed();
+    renderEmojis();
+  } catch (err) {
+    showStatus('Failed to load data from server.', true);
+    console.error('[DEBUG] Load error:', err);
   }
 }
 
@@ -1983,76 +1984,3 @@ function showDebugPanel(payload, loaded) {
 }
 let lastSavePayload = null;
 let lastLoadedData = null;
-
-// Patch saveData and loadData to update debug panel
-const _orig_saveData = saveData;
-saveData = async function() {
-  // Save only per-week schedule/specialDays
-  const schedules = {};
-  employees.forEach(emp => {
-    schedules[emp.id] = {
-      schedule: emp.schedule || {},
-      specialDays: emp.specialDays || {},
-      notes: emp.notes || {}
-    };
-  });
-  const payload = { weekStartDate, schedules, department: getCurrentDepartment() };
-  lastSavePayload = payload;
-  showDebugPanel(lastSavePayload, lastLoadedData);
-  try {
-    const res = await fetch(`${API_BASE}/api/schedule`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const result = await res.json();
-    console.log('[DEBUG] Save response:', result);
-    showStatus('Schedule saved!', false);
-  } catch (err) {
-    showStatus('Failed to save data.', true);
-    console.error('[DEBUG] Save error:', err);
-  }
-};
-
-const _orig_loadData = loadData;
-loadData = async function() {
-  if (!weekStartDate || weekStartDate < MIN_WEEK) {
-    weekStartDate = MIN_WEEK;
-    console.log('[DEBUG] loadData forced weekStartDate to MIN_WEEK:', weekStartDate);
-  }
-  try {
-    document.getElementById('warnings').innerHTML = '';
-    console.log('[DEBUG] Loading data for week:', weekStartDate);
-    const res = await fetch(`${API_BASE}/api/schedule?week=${weekStartDate}&department=${encodeURIComponent(getCurrentDepartment())}`);
-    const schedData = await res.json();
-    lastLoadedData = schedData;
-    showDebugPanel(lastSavePayload, lastLoadedData);
-    console.log('[DEBUG] Data received from backend:', JSON.stringify(schedData));
-    employees.forEach(emp => {
-      emp.schedule = {};
-      emp.specialDays = {};
-      emp.notes = {};
-    });
-    if (schedData.schedules) {
-      for (const empId in schedData.schedules) {
-        const emp = employees.find(e => e.id === empId);
-        if (emp) {
-          emp.schedule = schedData.schedules[empId].schedule || {};
-          emp.specialDays = schedData.schedules[empId].specialDays || {};
-          emp.notes = schedData.schedules[empId].notes || {};
-        }
-      }
-    }
-    createScheduleTable();
-    updateSummary();
-    highlightCoverage();
-    renderPrintPreview();
-    updateWeekRangeLabel();
-    updatePrevButtonState();
-    checkUnderstaffed();
-    renderEmojis();
-  } catch (err) {
-    showStatus('Failed to load data from server.', true);
-    console.error('[DEBUG] Load error:', err);
-  }
-};
