@@ -1,5 +1,5 @@
 // --- Password Protection ---
-const SITE_PASSWORD = 'rona2024'; // Change this to your desired password
+const SITE_PASSWORD = 'rona2025'; // Change this to your desired password
 
 // Check if user is already authenticated
 function checkAuthentication() {
