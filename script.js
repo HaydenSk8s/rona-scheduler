@@ -607,7 +607,33 @@ function handleScheduleChange() {
 
 // --- Backend Integration ---
 // Use the current hostname so API requests work from any device
+// API base URL - points to the backend service
 const API_BASE = 'https://rona-scheduler.onrender.com';
+
+// Network status indicator
+function showNetworkStatus(isOnline) {
+  let statusDiv = document.getElementById('network-status');
+  if (!statusDiv) {
+    statusDiv = document.createElement('div');
+    statusDiv.id = 'network-status';
+    statusDiv.style = 'position:fixed;top:18px;left:18px;z-index:9999;padding:8px 16px;border-radius:6px;font-size:0.9em;box-shadow:0 2px 8px #0002;';
+    document.body.appendChild(statusDiv);
+  }
+  
+  if (isOnline) {
+    statusDiv.textContent = '🟢 Online';
+    statusDiv.style.background = '#e0ffe0';
+    statusDiv.style.color = '#007a33';
+    statusDiv.style.border = '1px solid #007a33';
+    statusDiv.style.display = 'none';
+  } else {
+    statusDiv.textContent = '🔴 Offline - Changes saved locally';
+    statusDiv.style.background = '#ffe0e0';
+    statusDiv.style.color = '#b71c1c';
+    statusDiv.style.border = '1px solid #b71c1c';
+    statusDiv.style.display = 'block';
+  }
+}
 
 // Fetch and restore availability on page load
 async function loadAvailability() {
@@ -619,6 +645,7 @@ async function loadAvailability() {
     });
   } catch (err) {
     console.error('[DEBUG] Failed to load availability:', err);
+    showNetworkStatus(false);
   }
 }
 
@@ -632,6 +659,7 @@ async function saveAvailability() {
     });
   } catch (err) {
     console.error('[DEBUG] Failed to save availability:', err);
+    showNetworkStatus(false);
   }
 }
 
@@ -643,6 +671,7 @@ async function loadEmployees() {
     emps.forEach(e => employees.push(e));
   } catch (err) {
     console.error('[DEBUG] Failed to load employees:', err);
+    showNetworkStatus(false);
   }
 }
 async function saveEmployees() {
@@ -654,6 +683,7 @@ async function saveEmployees() {
     });
   } catch (err) {
     console.error('[DEBUG] Failed to save employees:', err);
+    showNetworkStatus(false);
   }
 }
 

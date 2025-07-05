@@ -17,55 +17,8 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY
 );
 
-// Initialize database tables
-async function initializeDatabase() {
-  try {
-    // Create schedule table
-    await supabase.rpc('exec_sql', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS schedule (
-          id SERIAL PRIMARY KEY,
-          data TEXT,
-          weekStartDate TEXT,
-          department TEXT DEFAULT 'customer_service',
-          UNIQUE(weekStartDate, department)
-        )
-      `
-    });
-
-    // Create availability table
-    await supabase.rpc('exec_sql', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS availability (
-          id SERIAL PRIMARY KEY,
-          data TEXT,
-          department TEXT DEFAULT 'customer_service',
-          UNIQUE(department)
-        )
-      `
-    });
-
-    // Create employees table
-    await supabase.rpc('exec_sql', {
-      sql: `
-        CREATE TABLE IF NOT EXISTS employees (
-          id SERIAL PRIMARY KEY,
-          data TEXT,
-          department TEXT DEFAULT 'customer_service',
-          UNIQUE(department)
-        )
-      `
-    });
-
-    console.log('Database tables initialized successfully');
-  } catch (error) {
-    console.error('Error initializing database:', error);
-    // If RPC doesn't work, we'll create tables through regular queries
-    console.log('Trying alternative table creation method...');
-  }
-}
-
-initializeDatabase();
+// Database tables are created manually in Supabase dashboard
+// No initialization needed as tables already exist
 
 // --- Delete old weeks whose Saturday is before today ---
 async function deleteOldWeeks() {
