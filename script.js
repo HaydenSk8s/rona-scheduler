@@ -226,6 +226,7 @@ function initializeApp() {
     setEditMode(true);
   });
   document.getElementById('save-week-btn').addEventListener('click', async () => {
+    commitAllScheduleInputs();
     applyEditsToEmployees();
     await saveEmployees();
     await saveAvailability();
@@ -1921,4 +1922,41 @@ function hideNotesSummary() {
   if (existingSummary) {
     existingSummary.remove();
   }
+}
+
+// Commit all in-progress UI edits to unsavedEmployees before saving
+function commitAllScheduleInputs() {
+  // For each input/select in the schedule table, update unsavedEmployees accordingly
+  const dataSource = unsavedEmployees;
+  days.forEach(day => {
+    dataSource.forEach((emp, idx) => {
+      // Only update if in edit mode
+      if (!isEditMode) return;
+      // Find all relevant inputs for this employee/day
+      const off = document.querySelector(`input.off-day[data-employee="${emp.id}"][data-day="${day}"]`);
+      const startHour = document.querySelector(`select.start-hour[data-employee="${emp.id}"][data-day="${day}"]`);
+      const startMin = document.querySelector(`select.start-min[data-employee="${emp.id}"][data-day="${day}"]`);
+      const startAmPm = document.querySelector(`select.start-ampm[data-employee="${emp.id}"][data-day="${day}"]`);
+      const endHour = document.querySelector(`select.end-hour[data-employee="${emp.id}"][data-day="${day}"]`);
+      const endMin = document.querySelector(`select.end-min[data-employee="${emp.id}"][data-day="${day}"]`);
+      const endAmPm = document.querySelector(`select.end-ampm[data-employee="${emp.id}"][data-day="${day}"]`);
+      if (!emp.schedule) emp.schedule = {};
+      if (!emp.specialDays) emp.specialDays = {};
+      if (off && off.checked) {
+        emp.specialDays[day] = 'OFF';
+        emp.schedule[day] = [];
+      } else if (startHour && startMin && startAmPm && endHour && endMin && endAmPm && startHour.value && startMin.value && startAmPm.value && endHour.value && endMin.value && endAmPm.value) {
+        const startH = getTimeFromDropdowns(startHour, startMin, startAmPm);
+        const endH = getTimeFromDropdowns(endHour, endMin, endAmPm);
+        if (startH !== endH) {
+          emp.schedule[day] = [startH, endH];
+          delete emp.specialDays[day];
+        } else {
+          emp.schedule[day] = [];
+        }
+      } else {
+        emp.schedule[day] = [];
+      }
+    });
+  });
 }
