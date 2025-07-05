@@ -607,7 +607,7 @@ function handleScheduleChange() {
 
 // --- Backend Integration ---
 // Use the current hostname so API requests work from any device
-const API_BASE = `http://${window.location.hostname}:3001`;
+const API_BASE = 'https://rona-scheduler.onrender.com';
 
 // Fetch and restore availability on page load
 async function loadAvailability() {
