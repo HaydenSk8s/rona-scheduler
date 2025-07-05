@@ -11,6 +11,9 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(bodyParser.json());
 
+// Serve static files (frontend)
+app.use(express.static('.'));
+
 // Initialize Supabase client
 const supabase = createClient(
   process.env.SUPABASE_URL,
