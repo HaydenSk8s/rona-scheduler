@@ -1,11 +1,38 @@
 // --- Background Slideshow ---
-// TODO: Add custom photos here when provided by user
 function initBackgroundSlideshow() {
   const slideshow = document.querySelector('.background-slideshow');
   if (!slideshow) return;
-  
-  // Slideshow functionality will be added when custom photos are provided
-  console.log('Background slideshow ready for custom photos');
+
+  // User-provided images (with 3 and 5 switched)
+  const backgrounds = [
+    'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg', // modern living room (image 1)
+    'https://images.pexels.com/photos/276724/pexels-photo-276724.jpeg', // kitchen (image 5)
+    'https://images.pexels.com/photos/259588/pexels-photo-259588.jpeg', // house exterior (image 4, now 3rd)
+    'https://images.pexels.com/photos/210604/pexels-photo-210604.jpeg', // cozy living room (image 2)
+    'https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg', // open office (image 3, now 5th)
+  ];
+
+  // Create slide elements
+  backgrounds.forEach((bg, index) => {
+    const slide = document.createElement('div');
+    slide.className = 'slide';
+    slide.style.backgroundImage = `url(${bg})`;
+    if (index === 0) slide.classList.add('active');
+    slideshow.appendChild(slide);
+  });
+
+  // Start slideshow
+  let currentSlide = 0;
+  const slides = slideshow.querySelectorAll('.slide');
+
+  function nextSlide() {
+    slides[currentSlide].classList.remove('active');
+    currentSlide = (currentSlide + 1) % slides.length;
+    slides[currentSlide].classList.add('active');
+  }
+
+  // Change slide every 4 seconds
+  setInterval(nextSlide, 4000);
 }
 
 // --- Emoji Rendering ---
