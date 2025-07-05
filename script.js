@@ -1973,7 +1973,8 @@ function showDebugPanel(payload, loaded) {
     document.body.appendChild(debugPanel);
     const toggleBtn = document.createElement('button');
     toggleBtn.textContent = 'Toggle Debug';
-    toggleBtn.style = 'position:fixed;bottom:10px;right:510px;z-index:99999;padding:8px 14px;border-radius:8px;background:#007aff;color:#fff;border:none;font-weight:600;cursor:pointer;box-shadow:0 2px 8px #007aff22;';
+    // Move to top left
+    toggleBtn.style = 'position:fixed;top:10px;left:10px;z-index:99999;padding:8px 14px;border-radius:8px;background:#007aff;color:#fff;border:none;font-weight:600;cursor:pointer;box-shadow:0 2px 8px #007aff22;';
     toggleBtn.onclick = () => {
       debugPanelVisible = !debugPanelVisible;
       debugPanel.style.display = debugPanelVisible ? 'block' : 'none';
