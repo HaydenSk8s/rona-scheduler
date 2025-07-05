@@ -970,8 +970,6 @@ async function saveData() {
       };
     });
     const payload = { weekStartDate, schedules, department: getCurrentDepartment() };
-    lastSavePayload = payload;
-    showDebugPanel(lastSavePayload, lastLoadedData);
     const res = await fetch(`${API_BASE}/api/schedule`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -988,7 +986,6 @@ async function saveData() {
 
 // --- Load schedule for a specific week and department ---
 async function loadData() {
-  // Ensure weekStartDate is never before MIN_WEEK
   if (!weekStartDate || weekStartDate < MIN_WEEK) {
     weekStartDate = MIN_WEEK;
     console.log('[DEBUG] loadData forced weekStartDate to MIN_WEEK:', weekStartDate);
@@ -998,8 +995,6 @@ async function loadData() {
     console.log('[DEBUG] Loading data for week:', weekStartDate);
     const res = await fetch(`${API_BASE}/api/schedule?week=${weekStartDate}&department=${encodeURIComponent(getCurrentDepartment())}`);
     const schedData = await res.json();
-    lastLoadedData = schedData;
-    showDebugPanel(lastSavePayload, lastLoadedData);
     console.log('[DEBUG] Data received from backend:', JSON.stringify(schedData));
     employees.forEach(emp => {
       emp.schedule = {};
@@ -1961,27 +1956,3 @@ function commitAllScheduleInputs() {
     });
   });
 }
-
-// --- Debug Panel ---
-let debugPanel = null;
-let debugPanelVisible = false;
-function showDebugPanel(payload, loaded) {
-  if (!debugPanel) {
-    debugPanel = document.createElement('div');
-    debugPanel.id = 'debug-panel';
-    debugPanel.style = 'position:fixed;bottom:10px;right:10px;z-index:99999;background:#222;color:#fff;padding:16px 18px;border-radius:10px;max-width:480px;max-height:60vh;overflow:auto;font-size:0.95em;box-shadow:0 2px 16px #0008;display:none;';
-    document.body.appendChild(debugPanel);
-    const toggleBtn = document.createElement('button');
-    toggleBtn.textContent = 'Toggle Debug';
-    // Move to top left
-    toggleBtn.style = 'position:fixed;top:10px;left:10px;z-index:99999;padding:8px 14px;border-radius:8px;background:#007aff;color:#fff;border:none;font-weight:600;cursor:pointer;box-shadow:0 2px 8px #007aff22;';
-    toggleBtn.onclick = () => {
-      debugPanelVisible = !debugPanelVisible;
-      debugPanel.style.display = debugPanelVisible ? 'block' : 'none';
-    };
-    document.body.appendChild(toggleBtn);
-  }
-  debugPanel.innerHTML = `<b>Last Save Payload:</b><br><pre style='white-space:pre-wrap;'>${payload ? JSON.stringify(payload, null, 2) : '(none)'}</pre><hr><b>Last Loaded Data:</b><br><pre style='white-space:pre-wrap;'>${loaded ? JSON.stringify(loaded, null, 2) : '(none)'}</pre>`;
-}
-let lastSavePayload = null;
-let lastLoadedData = null;
