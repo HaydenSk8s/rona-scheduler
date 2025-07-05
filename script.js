@@ -1,3 +1,39 @@
+// --- Background Slideshow ---
+function initBackgroundSlideshow() {
+  const slideshow = document.querySelector('.background-slideshow');
+  if (!slideshow) return;
+
+  // Array of background images for the slideshow
+  const backgrounds = [
+    'https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
+    'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
+    'https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80'
+  ];
+
+  // Create slide elements
+  backgrounds.forEach((bg, index) => {
+    const slide = document.createElement('div');
+    slide.className = 'slide';
+    slide.style.backgroundImage = `url(${bg})`;
+    if (index === 0) slide.classList.add('active');
+    slideshow.appendChild(slide);
+  });
+
+  // Start slideshow
+  let currentSlide = 0;
+  const slides = slideshow.querySelectorAll('.slide');
+  
+  function nextSlide() {
+    slides[currentSlide].classList.remove('active');
+    currentSlide = (currentSlide + 1) % slides.length;
+    slides[currentSlide].classList.add('active');
+  }
+
+  // Change slide every 4 seconds
+  setInterval(nextSlide, 4000);
+}
+
 // --- Emoji Rendering ---
 function renderEmojis() {
   if (window.twemoji) {
@@ -1242,6 +1278,7 @@ function setCurrentDepartment(dept) {
 
 // Start the application with password protection
 document.addEventListener('DOMContentLoaded', () => {
+  initBackgroundSlideshow();
   checkAuthentication();
 });
 
