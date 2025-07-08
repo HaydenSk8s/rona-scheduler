@@ -97,29 +97,6 @@ function showMainContent() {
 
 // Initialize the app (moved from global scope)
 function initializeApp() {
-  // Setup preview department dropdown
-  const previewDeptSelect = document.getElementById('preview-department-switcher');
-  previewDeptSelect.value = 'all';
-  previewDepartment = 'all';
-  previewDeptSelect.addEventListener('change', (e) => {
-    previewDepartment = e.target.value;
-    createScheduleTable();
-    renderPrintPreview();
-    updateSummary();
-    highlightCoverage();
-  });
-
-  // Setup edit department dropdown (hidden by default)
-  const editDeptRow = document.getElementById('edit-dept-row');
-  const editDeptSelect = document.getElementById('edit-department-switcher');
-  editDeptRow.style.display = 'none';
-  editDepartment = null;
-  editDeptSelect.value = 'customer_service';
-  editDeptSelect.addEventListener('change', (e) => {
-    editDepartment = e.target.value;
-    createScheduleTable();
-  });
-
   // Department switcher setup
   const deptSelect = document.getElementById('department-switcher');
   if (deptSelect) {
@@ -241,9 +218,6 @@ function initializeApp() {
   // Edit/Save Week Button Logic
   document.getElementById('edit-week-btn').addEventListener('click', () => {
     setEditMode(true);
-    document.getElementById('edit-dept-row').style.display = '';
-    editDepartment = document.getElementById('edit-department-switcher').value;
-    createScheduleTable();
   });
   document.getElementById('save-week-btn').addEventListener('click', async () => {
     commitAllScheduleInputs();
@@ -251,8 +225,6 @@ function initializeApp() {
     await saveEmployees();
     await saveAvailability();
     setEditMode(false);
-    document.getElementById('edit-dept-row').style.display = 'none';
-    editDepartment = null;
     await saveData();
     createScheduleTable();
     updateSummary();
@@ -267,8 +239,6 @@ function initializeApp() {
     // Revert to last saved state
     unsavedEmployees = [];
     setEditMode(false);
-    document.getElementById('edit-dept-row').style.display = 'none';
-    editDepartment = null;
     // Reload data from server to ensure we have the last saved state
     loadData().then(() => {
       createScheduleTable();
@@ -310,9 +280,9 @@ const storeHours = {
 function createScheduleTable() {
   const tbody = document.getElementById('schedule-body');
   tbody.innerHTML = '';
-  const dataSource = getActiveEmployees();
-  const isEdit = isEditMode;
-  const deptToShow = isEdit ? editDepartment : previewDepartment;
+  // Always show all employees
+  const dataSource = employees;
+  const selectedDept = getCurrentDepartment();
   dataSource.forEach((emp, idx) => {
     const tr = document.createElement('tr');
     const nameTd = document.createElement('td');
@@ -327,9 +297,9 @@ function createScheduleTable() {
     empTypeSelect.style = 'font-size:0.97em;padding:2px 8px;border-radius:6px;border:1px solid #e0e0e0;background:#f7f8fa;margin-right:6px;';
     empTypeSelect.innerHTML = '<option value="full">Full Time</option><option value="part">Part Time</option>';
     empTypeSelect.value = emp.employmentType;
-    empTypeSelect.disabled = !isEdit;
+    empTypeSelect.disabled = !isEditMode;
     empTypeSelect.addEventListener('change', e => {
-      if (!isEdit) return;
+      if (!isEditMode) return;
       emp.employmentType = e.target.value;
       createScheduleTable();
       // Re-render emojis after employment type change
@@ -345,9 +315,9 @@ function createScheduleTable() {
     nameInput.placeholder = 'Employee';
     nameInput.className = 'employee-name-input';
     nameInput.style = 'width:120px;height:36px;margin-right:14px;font-weight:600;font-size:1.05rem;border-radius:7px;border:1px solid #e0e0e0;padding:5px 10px;background:#f7f8fa;vertical-align:middle;line-height:1.3;box-sizing:border-box;';
-    nameInput.disabled = !isEdit;
+    nameInput.disabled = !isEditMode;
     nameInput.addEventListener('change', e => {
-      if (!isEdit) return;
+      if (!isEditMode) return;
       dataSource[idx].name = e.target.value.trim();
       // Preserve scroll position
       const scrollY = window.scrollY;
@@ -361,7 +331,7 @@ function createScheduleTable() {
       renderEmojis();
     });
     nameInput.addEventListener('input', e => {
-      if (!isEdit) return;
+      if (!isEditMode) return;
       dataSource[idx].name = e.target.value.trim();
     });
     nameTd.appendChild(nameInput);
@@ -370,9 +340,9 @@ function createScheduleTable() {
     availBtn.textContent = 'Edit Availability';
     availBtn.title = 'Edit Availability';
     availBtn.style = 'width:150px;height:36px;margin-left:14px;margin-top:7px;background:#f3f4f7;border:none;color:#007aff;font-size:1.05rem;cursor:pointer;border-radius:7px;padding:5px 10px;vertical-align:middle;line-height:1.3;box-sizing:border-box;display:inline-block;white-space:nowrap;';
-    availBtn.disabled = !isEdit;
+    availBtn.disabled = !isEditMode;
     availBtn.addEventListener('click', () => {
-      if (isEdit) {
+      if (isEditMode) {
         // Open modal first, then preserve scroll position and update table
         openAvailabilityModal(emp.id);
         const scrollY = window.scrollY;
@@ -388,9 +358,9 @@ function createScheduleTable() {
     removeBtn.innerHTML = 'Remove 🗑️';
     removeBtn.title = 'Remove Employee';
     removeBtn.style = 'margin-left:10px;margin-top:2px;background:none;border:none;color:#b71c1c;font-size:1.08rem;cursor:pointer;vertical-align:middle;padding:3px 8px;';
-    removeBtn.disabled = !isEdit;
+    removeBtn.disabled = !isEditMode;
     removeBtn.addEventListener('click', () => {
-      if (!isEdit) return;
+      if (!isEditMode) return;
       dataSource.splice(idx, 1);
       delete availability[emp.id];
       createScheduleTable();
@@ -406,201 +376,39 @@ function createScheduleTable() {
     tr.appendChild(nameTd);
     days.forEach((day) => {
       const td = document.createElement('td');
-      if (isEdit) {
-        if (!emp.schedule) emp.schedule = {};
-        if (!emp.specialDays) emp.specialDays = {};
-        if (!emp.notes) emp.notes = {};
-        // --- ORIGINAL FLEX ROW: special selectors + time dropdowns ---
-        const rowDiv = document.createElement('div');
-        rowDiv.style.display = 'flex';
-        rowDiv.style.alignItems = 'center';
-        rowDiv.style.gap = '4px';
-        // Special selectors
-        const specials = [
-          { key: 'OFF', label: 'OFF', class: 'special-btn off', color: '#b71c1c', bg: '#ffeaea' },
-          { key: 'RDO', label: 'RDO', class: 'special-btn rdo', color: '#007aff', bg: '#e0eaff' },
-          { key: 'VAC', label: 'VAC', class: 'special-btn vac', color: '#ff8c00', bg: '#ffc878' },
-          { key: 'STAT', label: 'STAT', class: 'special-btn stat', color: '#007a33', bg: '#e0ffe0' },
-        ];
-        specials.forEach(s => {
-          const btn = document.createElement('button');
-          btn.textContent = s.label;
-          btn.type = 'button';
-          btn.className = s.class + (emp.specialDays[day] === s.key ? ' selected' : '');
-          btn.style.background = emp.specialDays[day] === s.key ? s.bg : '';
-          btn.style.color = emp.specialDays[day] === s.key ? s.color : '';
-          btn.onclick = () => {
-            emp.specialDays[day] = s.key;
-            emp.schedule[day] = [];
-            handleScheduleChange();
-          };
-          rowDiv.appendChild(btn);
-        });
-        // Time range dropdowns (hour/minute/AM-PM)
-        const timeRow = document.createElement('span');
-        timeRow.className = 'time-range-row';
-        // Start hour
-        const startHour = document.createElement('select');
-        startHour.className = 'start-hour';
-        for (let h = 1; h <= 12; h++) {
-          const opt = document.createElement('option');
-          opt.value = h;
-          opt.textContent = h;
-          startHour.appendChild(opt);
-        }
-        // Start min
-        const startMin = document.createElement('select');
-        startMin.className = 'start-min';
-        ['00', '15', '30', '45'].forEach(m => {
-          const opt = document.createElement('option');
-          opt.value = m;
-          opt.textContent = m;
-          startMin.appendChild(opt);
-        });
-        // Start AM/PM
-        const startAmPm = document.createElement('select');
-        startAmPm.className = 'start-ampm';
-        ['AM', 'PM'].forEach(ampm => {
-          const opt = document.createElement('option');
-          opt.value = ampm;
-          opt.textContent = ampm;
-          startAmPm.appendChild(opt);
-        });
-        // End hour
-        const endHour = document.createElement('select');
-        endHour.className = 'end-hour';
-        for (let h = 1; h <= 12; h++) {
-          const opt = document.createElement('option');
-          opt.value = h;
-          opt.textContent = h;
-          endHour.appendChild(opt);
-        }
-        // End min
-        const endMin = document.createElement('select');
-        endMin.className = 'end-min';
-        ['00', '15', '30', '45'].forEach(m => {
-          const opt = document.createElement('option');
-          opt.value = m;
-          opt.textContent = m;
-          endMin.appendChild(opt);
-        });
-        // End AM/PM
-        const endAmPm = document.createElement('select');
-        endAmPm.className = 'end-ampm';
-        ['AM', 'PM'].forEach(ampm => {
-          const opt = document.createElement('option');
-          opt.value = ampm;
-          opt.textContent = ampm;
-          endAmPm.appendChild(opt);
-        });
-        // Set current values if present
-        if (emp.schedule[day] && emp.schedule[day].length === 2) {
-          const s = emp.schedule[day][0];
-          const e = emp.schedule[day][1];
-          let sHour = Math.floor(s) % 12 || 12;
-          let sMin = (Math.round((s - Math.floor(s)) * 60)).toString().padStart(2, '0');
-          let sAmPm = s >= 12 ? 'PM' : 'AM';
-          let eHour = Math.floor(e) % 12 || 12;
-          let eMin = (Math.round((e - Math.floor(e)) * 60)).toString().padStart(2, '0');
-          let eAmPm = e >= 12 ? 'PM' : 'AM';
-          startHour.value = sHour;
-          startMin.value = sMin;
-          startAmPm.value = sAmPm;
-          endHour.value = eHour;
-          endMin.value = eMin;
-          endAmPm.value = eAmPm;
-        } else {
-          startHour.value = '';
-          startMin.value = '';
-          startAmPm.value = '';
-          endHour.value = '';
-          endMin.value = '';
-          endAmPm.value = '';
-        }
-        // Change handler
-        function updateTime() {
-          const sHourVal = parseInt(startHour.value);
-          const sMinVal = parseInt(startMin.value);
-          const sAmPmVal = startAmPm.value;
-          const eHourVal = parseInt(endHour.value);
-          const eMinVal = parseInt(endMin.value);
-          const eAmPmVal = endAmPm.value;
-          if (sHourVal && sMinVal >= 0 && sAmPmVal && eHourVal && eMinVal >= 0 && eAmPmVal) {
-            let s = sHourVal % 12 + (sAmPmVal === 'PM' ? 12 : 0) + sMinVal / 60;
-            let e = eHourVal % 12 + (eAmPmVal === 'PM' ? 12 : 0) + eMinVal / 60;
-            if (sHourVal === 12) s = (sAmPmVal === 'PM' ? 12 : 0) + sMinVal / 60;
-            if (eHourVal === 12) e = (eAmPmVal === 'PM' ? 12 : 0) + eMinVal / 60;
-            if (e > s) {
-              emp.schedule[day] = [s, e];
-              delete emp.specialDays[day];
-            } else {
-              emp.schedule[day] = [];
-            }
-          } else {
-            emp.schedule[day] = [];
-          }
-          handleScheduleChange();
-        }
-        [startHour, startMin, startAmPm, endHour, endMin, endAmPm].forEach(el => {
-          el.addEventListener('change', updateTime);
-        });
-        timeRow.appendChild(startHour);
-        timeRow.appendChild(startMin);
-        timeRow.appendChild(startAmPm);
-        const sep = document.createElement('span');
-        sep.className = 'time-sep';
-        sep.textContent = '–';
-        timeRow.appendChild(sep);
-        timeRow.appendChild(endHour);
-        timeRow.appendChild(endMin);
-        timeRow.appendChild(endAmPm);
-        rowDiv.appendChild(timeRow);
-        // Notes input
-        const notesInput = document.createElement('input');
-        notesInput.type = 'text';
-        notesInput.placeholder = 'Notes';
-        notesInput.className = 'notes-input';
-        notesInput.value = emp.notes[day] || '';
-        notesInput.style = 'width:90%;margin-left:6px;font-size:0.97em;padding:2px 8px;border-radius:6px;border:1px solid #e0e0e0;background:#f7f8fa;';
-        notesInput.onchange = () => {
-          emp.notes[day] = notesInput.value;
-          handleScheduleChange();
-        };
-        rowDiv.appendChild(notesInput);
-        td.appendChild(rowDiv);
-      } else {
-        // --- PREVIEW MODE: show colored shift blocks ---
-        let cellContent = '';
-        let cellStyle = '';
-        if (deptToShow === 'all') {
-          let found = false;
-          Object.keys(departmentColors).forEach(dept => {
-            if (emp.schedulesByDept && emp.schedulesByDept[dept] && emp.schedulesByDept[dept][day] && emp.schedulesByDept[dept][day].length === 2) {
-              const sched = emp.schedulesByDept[dept][day];
-              const start = sched[0];
-              const end = sched[1];
-              if (end > start) {
-                found = true;
-                cellContent += `<div style='border-left: 6px solid ${departmentColors[dept]}; padding-left:6px; margin-bottom:2px;'>${readableTime(start)} – ${readableTime(end)} <span style='font-size:0.85em;color:#888;'>(${dept.replace('_',' ')})</span></div>`;
-              }
-            }
-          });
-          if (!found) {
-            cellContent = '';
-          }
-        } else {
-          if (emp.schedulesByDept && emp.schedulesByDept[deptToShow] && emp.schedulesByDept[deptToShow][day] && emp.schedulesByDept[deptToShow][day].length === 2) {
-            const sched = emp.schedulesByDept[deptToShow][day];
+      // For each department, check if there's a shift for this employee/day
+      let cellContent = '';
+      let cellStyle = '';
+      if (selectedDept === 'front_end') {
+        // Show all shifts for all departments, each with a colored border
+        let found = false;
+        Object.keys(departmentColors).forEach(dept => {
+          if (emp.schedulesByDept && emp.schedulesByDept[dept] && emp.schedulesByDept[dept][day] && emp.schedulesByDept[dept][day].length === 2) {
+            const sched = emp.schedulesByDept[dept][day];
             const start = sched[0];
             const end = sched[1];
             if (end > start) {
-              cellContent = `<div style='border-left: 6px solid ${departmentColors[deptToShow]}; padding-left:6px;'>${readableTime(start)} – ${readableTime(end)}</div>`;
+              found = true;
+              cellContent += `<div style='border-left: 6px solid ${departmentColors[dept]}; padding-left:6px; margin-bottom:2px;'>${readableTime(start)} – ${readableTime(end)} <span style='font-size:0.85em;color:#888;'>(${dept.replace('_',' ')})</span></div>`;
             }
           }
+        });
+        if (!found) {
+          cellContent = '';
         }
-        td.innerHTML = cellContent;
-        td.style = cellStyle;
+      } else {
+        // Only show shifts for the selected department
+        if (emp.schedulesByDept && emp.schedulesByDept[selectedDept] && emp.schedulesByDept[selectedDept][day] && emp.schedulesByDept[selectedDept][day].length === 2) {
+          const sched = emp.schedulesByDept[selectedDept][day];
+          const start = sched[0];
+          const end = sched[1];
+          if (end > start) {
+            cellContent = `<div style='border-left: 6px solid ${departmentColors[selectedDept]}; padding-left:6px;'>${readableTime(start)} – ${readableTime(end)}</div>`;
+          }
+        }
       }
+      td.innerHTML = cellContent;
+      td.style = cellStyle;
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -710,7 +518,7 @@ async function saveEmployees() {
 async function saveData() {
   try {
     const schedules = {};
-    getActiveEmployees().forEach(emp => {
+    employees.forEach(emp => {
       schedules[emp.id] = {
         schedule: emp.schedule || {},
         specialDays: emp.specialDays || {},
