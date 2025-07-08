@@ -1794,7 +1794,8 @@ function renderPrintPreview() {
         if (scheduled && scheduled.length === 2) {
           cell = `${readableTime(scheduled[0])} – ${readableTime(scheduled[1])}`;
         } else if (allowedRanges.length === 0) {
-          cell = '<span style="color:#b71c1c;">N/A</span>';
+          cell = '';
+          cellStyle = 'background:#444;';
         } else {
           cell = '';
         }
