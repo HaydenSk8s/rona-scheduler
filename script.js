@@ -1795,7 +1795,7 @@ function renderPrintPreview() {
           cell = `${readableTime(scheduled[0])} – ${readableTime(scheduled[1])}`;
         } else if (allowedRanges.length === 0) {
           cell = '';
-          cellStyle = 'background:#444;';
+          cellStyle = 'background:repeating-linear-gradient(45deg,#eee,#eee 6px,#444 6px,#444 12px);';
         } else {
           cell = '';
         }
