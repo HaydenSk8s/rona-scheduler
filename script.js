@@ -115,12 +115,6 @@ function initializeApp() {
   console.log('[DEBUG] Initial weekStartDate:', weekStartDate);
   console.log('[DEBUG] getCurrentSundayISO():', getCurrentSundayISO());
 
-  // On initial load, ensure weekStartDate is not in the past (do this FIRST)
-  if (isWeekInPast(weekStartDate)) {
-    weekStartDate = getCurrentSundayISO();
-    console.log('[DEBUG] weekStartDate updated to current Sunday:', weekStartDate);
-  }
-
   // Remove any schedule data before MIN_WEEK from the database on initial load
   fetch(`${API_BASE}/api/schedule/weeks?department=${encodeURIComponent(getCurrentDepartment())}`).then(res => res.json()).then(weeks => {
     weeks.forEach(week => {
