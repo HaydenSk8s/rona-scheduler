@@ -1257,7 +1257,7 @@ const departmentOptions = [
   { value: 'customer_service', label: 'Customer Service' },
   { value: 'head_cashier', label: 'Head Cashier' },
   { value: 'loadout', label: 'Loadout' },
-  { value: 'front_end', label: 'Front End' },
+  { value: 'cash', label: 'Cash' },
 ];
 
 function getCurrentDepartment() {
@@ -1965,3 +1965,10 @@ function commitAllScheduleInputs() {
     });
   });
 }
+
+const ALL_DEPARTMENTS = [
+  'customer_service',
+  'head_cashier', 
+  'cash',
+  'loadout',
+];
