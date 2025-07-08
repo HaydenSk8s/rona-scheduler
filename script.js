@@ -407,12 +407,10 @@ function createScheduleTable() {
     days.forEach((day) => {
       const td = document.createElement('td');
       if (isEdit) {
-        // --- EDIT MODE: show controls for editDepartment only ---
-        // Render dropdowns and special controls for the selected department
-        // Get or create schedulesByDept for this employee
+        // --- RESTORED ORIGINAL EDITABLE CELL LAYOUT ---
         if (!emp.schedulesByDept) emp.schedulesByDept = {};
         if (!emp.schedulesByDept[editDepartment]) emp.schedulesByDept[editDepartment] = {};
-        const sched = emp.schedulesByDept[editDepartment][day] || [];
+        let sched = emp.schedulesByDept[editDepartment][day] || [];
         // Special day controls
         const specialRow = document.createElement('div');
         specialRow.className = 'special-controls-row';
@@ -421,9 +419,8 @@ function createScheduleTable() {
         offBtn.textContent = 'OFF';
         offBtn.type = 'button';
         offBtn.className = 'off-btn';
-        offBtn.style = 'margin-right:4px;background:#f7f7f7;border:1px solid #e0e0e0;border-radius:6px;padding:2px 10px;cursor:pointer;';
         offBtn.onclick = () => {
-          emp.schedulesByDept[editDepartment][day] = [];
+          emp.schedulesByDept[editDepartment][day] = ['OFF'];
           handleScheduleChange();
         };
         specialRow.appendChild(offBtn);
@@ -432,7 +429,6 @@ function createScheduleTable() {
         rdoBtn.textContent = 'RDO';
         rdoBtn.type = 'button';
         rdoBtn.className = 'rdo-btn';
-        rdoBtn.style = 'margin-right:4px;background:#e3f2fd;border:1px solid #90caf9;border-radius:6px;padding:2px 10px;cursor:pointer;';
         rdoBtn.onclick = () => {
           emp.schedulesByDept[editDepartment][day] = ['RDO'];
           handleScheduleChange();
@@ -443,7 +439,6 @@ function createScheduleTable() {
         vacBtn.textContent = 'VAC';
         vacBtn.type = 'button';
         vacBtn.className = 'vac-btn';
-        vacBtn.style = 'margin-right:4px;background:#fff3e0;border:1px solid #ffb74d;border-radius:6px;padding:2px 10px;cursor:pointer;';
         vacBtn.onclick = () => {
           emp.schedulesByDept[editDepartment][day] = ['VAC'];
           handleScheduleChange();
@@ -454,60 +449,145 @@ function createScheduleTable() {
         statBtn.textContent = 'STAT';
         statBtn.type = 'button';
         statBtn.className = 'stat-btn';
-        statBtn.style = 'margin-right:4px;background:#e8f5e9;border:1px solid #81c784;border-radius:6px;padding:2px 10px;cursor:pointer;';
         statBtn.onclick = () => {
           emp.schedulesByDept[editDepartment][day] = ['STAT'];
           handleScheduleChange();
         };
         specialRow.appendChild(statBtn);
         td.appendChild(specialRow);
-        // Time range dropdowns
+        // Time range dropdowns (hour/minute/AM-PM)
         const timeRow = document.createElement('div');
         timeRow.className = 'time-range-row';
         // Start hour
         const startHour = document.createElement('select');
         startHour.className = 'start-hour';
-        for (let h = 6; h <= 21; h++) {
+        for (let h = 1; h <= 12; h++) {
           const opt = document.createElement('option');
           opt.value = h;
-          opt.textContent = h < 12 ? `${h} AM` : (h === 12 ? '12 PM' : `${h-12} PM`);
+          opt.textContent = h;
           startHour.appendChild(opt);
         }
+        // Start min
+        const startMin = document.createElement('select');
+        startMin.className = 'start-min';
+        ['00', '15', '30', '45'].forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.textContent = m;
+          startMin.appendChild(opt);
+        });
+        // Start AM/PM
+        const startAmPm = document.createElement('select');
+        startAmPm.className = 'start-ampm';
+        ['AM', 'PM'].forEach(ampm => {
+          const opt = document.createElement('option');
+          opt.value = ampm;
+          opt.textContent = ampm;
+          startAmPm.appendChild(opt);
+        });
         // End hour
         const endHour = document.createElement('select');
         endHour.className = 'end-hour';
-        for (let h = 7; h <= 22; h++) {
+        for (let h = 1; h <= 12; h++) {
           const opt = document.createElement('option');
           opt.value = h;
-          opt.textContent = h < 12 ? `${h} AM` : (h === 12 ? '12 PM' : `${h-12} PM`);
+          opt.textContent = h;
           endHour.appendChild(opt);
         }
-        // Set current values
+        // End min
+        const endMin = document.createElement('select');
+        endMin.className = 'end-min';
+        ['00', '15', '30', '45'].forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.textContent = m;
+          endMin.appendChild(opt);
+        });
+        // End AM/PM
+        const endAmPm = document.createElement('select');
+        endAmPm.className = 'end-ampm';
+        ['AM', 'PM'].forEach(ampm => {
+          const opt = document.createElement('option');
+          opt.value = ampm;
+          opt.textContent = ampm;
+          endAmPm.appendChild(opt);
+        });
+        // Set current values if present
         if (sched.length === 2) {
-          startHour.value = sched[0];
-          endHour.value = sched[1];
+          // Convert decimal hours to hour/min/ampm
+          const s = sched[0];
+          const e = sched[1];
+          let sHour = Math.floor(s) % 12 || 12;
+          let sMin = (Math.round((s - Math.floor(s)) * 60)).toString().padStart(2, '0');
+          let sAmPm = s >= 12 ? 'PM' : 'AM';
+          let eHour = Math.floor(e) % 12 || 12;
+          let eMin = (Math.round((e - Math.floor(e)) * 60)).toString().padStart(2, '0');
+          let eAmPm = e >= 12 ? 'PM' : 'AM';
+          startHour.value = sHour;
+          startMin.value = sMin;
+          startAmPm.value = sAmPm;
+          endHour.value = eHour;
+          endMin.value = eMin;
+          endAmPm.value = eAmPm;
         } else {
           startHour.value = '';
+          startMin.value = '';
+          startAmPm.value = '';
           endHour.value = '';
+          endMin.value = '';
+          endAmPm.value = '';
         }
-        // Change handlers
-        startHour.onchange = endHour.onchange = () => {
-          const s = parseInt(startHour.value);
-          const e = parseInt(endHour.value);
-          if (!isNaN(s) && !isNaN(e) && e > s) {
-            emp.schedulesByDept[editDepartment][day] = [s, e];
+        // Change handler
+        function updateTime() {
+          const sHourVal = parseInt(startHour.value);
+          const sMinVal = parseInt(startMin.value);
+          const sAmPmVal = startAmPm.value;
+          const eHourVal = parseInt(endHour.value);
+          const eMinVal = parseInt(endMin.value);
+          const eAmPmVal = endAmPm.value;
+          if (sHourVal && sMinVal >= 0 && sAmPmVal && eHourVal && eMinVal >= 0 && eAmPmVal) {
+            let s = sHourVal % 12 + (sAmPmVal === 'PM' ? 12 : 0) + sMinVal / 60;
+            let e = eHourVal % 12 + (eAmPmVal === 'PM' ? 12 : 0) + eMinVal / 60;
+            if (sHourVal === 12) s = (sAmPmVal === 'PM' ? 12 : 0) + sMinVal / 60;
+            if (eHourVal === 12) e = (eAmPmVal === 'PM' ? 12 : 0) + eMinVal / 60;
+            if (e > s) {
+              emp.schedulesByDept[editDepartment][day] = [s, e];
+            } else {
+              emp.schedulesByDept[editDepartment][day] = [];
+            }
           } else {
             emp.schedulesByDept[editDepartment][day] = [];
           }
           handleScheduleChange();
-        };
+        }
+        [startHour, startMin, startAmPm, endHour, endMin, endAmPm].forEach(el => {
+          el.addEventListener('change', updateTime);
+        });
         timeRow.appendChild(startHour);
+        timeRow.appendChild(startMin);
+        timeRow.appendChild(startAmPm);
         const sep = document.createElement('span');
         sep.className = 'time-sep';
         sep.textContent = '–';
         timeRow.appendChild(sep);
         timeRow.appendChild(endHour);
+        timeRow.appendChild(endMin);
+        timeRow.appendChild(endAmPm);
         td.appendChild(timeRow);
+        // Notes input
+        const notesInput = document.createElement('input');
+        notesInput.type = 'text';
+        notesInput.placeholder = 'Notes';
+        notesInput.className = 'notes-input';
+        notesInput.value = (emp.notesByDept && emp.notesByDept[editDepartment] && emp.notesByDept[editDepartment][day]) || '';
+        notesInput.style = 'width:90%;margin-top:4px;font-size:0.97em;padding:2px 8px;border-radius:6px;border:1px solid #e0e0e0;background:#f7f8fa;';
+        notesInput.onchange = () => {
+          if (!emp.notesByDept) emp.notesByDept = {};
+          if (!emp.notesByDept[editDepartment]) emp.notesByDept[editDepartment] = {};
+          emp.notesByDept[editDepartment][day] = notesInput.value;
+          handleScheduleChange();
+        };
+        td.appendChild(notesInput);
       } else {
         // --- PREVIEW MODE: show colored shift blocks ---
         let cellContent = '';
