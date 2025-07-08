@@ -272,7 +272,7 @@ const storeHours = {
   Wednesday: { open: 7, close: 21 },
   Thursday:  { open: 7, close: 21 },
   Friday:    { open: 7, close: 21 },
-  Saturday:  { open: 8, close: 20 },
+  Saturday:  { open: 7, close: 20 },
   Sunday:    { open: 8, close: 20 }
 };
 
@@ -1638,14 +1638,25 @@ function openAvailabilityModal(employeeId, tempAvail) {
       if (!isEditMode) return;
       e.preventDefault();
       if (["Saturday", "Sunday"].includes(day)) {
-        // Weekends: 7:45am - 8:15pm
-        tempAvail[day] = [[7.75, 20.25]];
-        setDropdownValue(startHour, '7');
-        setDropdownValue(startMin, '45');
-        setDropdownValue(startAmPm, 'AM');
-        setDropdownValue(endHour, '8');
-        setDropdownValue(endMin, '15');
-        setDropdownValue(endAmPm, 'PM');
+        if (day === "Saturday") {
+          // Saturday: 6:45am - 8:15pm
+          tempAvail[day] = [[6.75, 20.25]];
+          setDropdownValue(startHour, '6');
+          setDropdownValue(startMin, '45');
+          setDropdownValue(startAmPm, 'AM');
+          setDropdownValue(endHour, '8');
+          setDropdownValue(endMin, '15');
+          setDropdownValue(endAmPm, 'PM');
+        } else {
+          // Sunday: 7:45am - 8:15pm
+          tempAvail[day] = [[7.75, 20.25]];
+          setDropdownValue(startHour, '7');
+          setDropdownValue(startMin, '45');
+          setDropdownValue(startAmPm, 'AM');
+          setDropdownValue(endHour, '8');
+          setDropdownValue(endMin, '15');
+          setDropdownValue(endAmPm, 'PM');
+        }
       } else {
         // Weekdays: 6:45am - 9:15pm
         tempAvail[day] = [[6.75, 21.25]];
