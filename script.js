@@ -280,7 +280,9 @@ const storeHours = {
 function createScheduleTable() {
   const tbody = document.getElementById('schedule-body');
   tbody.innerHTML = '';
-  const dataSource = getActiveEmployees();
+  // Always show all employees
+  const dataSource = employees;
+  const selectedDept = getCurrentDepartment();
   dataSource.forEach((emp, idx) => {
     const tr = document.createElement('tr');
     const nameTd = document.createElement('td');
@@ -374,479 +376,39 @@ function createScheduleTable() {
     tr.appendChild(nameTd);
     days.forEach((day) => {
       const td = document.createElement('td');
-      // Get allowed ranges for this employee/day
-      const allowedRanges = (availability[emp.id] && availability[emp.id][day]) ? availability[emp.id][day] : [];
-      // If not available, show message and skip dropdowns
-      if (allowedRanges.length === 0) {
-        const notAvailDiv = document.createElement('div');
-        notAvailDiv.textContent = 'Not Available';
-        notAvailDiv.style = 'color:#b71c1c;font-size:1em;font-weight:500;padding:8px 0;';
-        td.appendChild(notAvailDiv);
-        tr.appendChild(td);
-        return;
-      }
-      // Special day buttons and logic
-      if (!emp.specialDays) emp.specialDays = {};
-      if (!emp.schedule) emp.schedule = {};
-      if (!emp.notes) emp.notes = {}; // Initialize notes for new employees
-      // OFF checkbox
-      const off = document.createElement('input');
-      off.type = 'checkbox';
-      off.className = 'off-day';
-      off.title = 'Off';
-      off.disabled = !isEditMode;
-      // --- VAC and RDO buttons ---
-      const vacBtn = document.createElement('button');
-      vacBtn.textContent = 'VAC';
-      vacBtn.title = 'Vacation';
-      vacBtn.className = 'special-btn vac';
-      vacBtn.style = 'margin-left:6px;font-size:0.95em;cursor:pointer;border-radius:6px;padding:2px 8px;';
-      vacBtn.disabled = !isEditMode;
-      const rdoBtn = document.createElement('button');
-      rdoBtn.textContent = 'RDO';
-      rdoBtn.title = 'Requested Day Off';
-      rdoBtn.className = 'special-btn rdo';
-      rdoBtn.style = 'margin-left:6px;font-size:0.95em;cursor:pointer;border-radius:6px;padding:2px 8px;';
-      rdoBtn.disabled = !isEditMode;
-      // STAT button (for stat holidays, only for full time)
-      const statBtn = document.createElement('button');
-      statBtn.textContent = 'STAT';
-      statBtn.title = 'Stat Holiday';
-      statBtn.className = 'special-btn stat';
-      statBtn.style = 'margin-left:6px;font-size:0.95em;cursor:pointer;border-radius:6px;padding:2px 8px;white-space:nowrap;';
-      statBtn.disabled = !isEditMode;
-      // Highlight if set
-      function updateSpecialDayStyles() {
-        vacBtn.classList.remove('selected');
-        rdoBtn.classList.remove('selected');
-        statBtn.classList.remove('selected');
-        if (emp.specialDays[day] === 'VAC') vacBtn.classList.add('selected');
-        if (emp.specialDays[day] === 'RDO') rdoBtn.classList.add('selected');
-        if (emp.specialDays[day] === 'STAT') statBtn.classList.add('selected');
-        off.checked = emp.specialDays[day] === 'OFF';
-      }
-      vacBtn.onclick = (e) => {
-        if (!isEditMode) return;
-        e.preventDefault();
-        emp.specialDays[day] = emp.specialDays[day] === 'VAC' ? undefined : 'VAC';
-        if (emp.specialDays[day]) {
-          off.checked = false;
-          emp.specialDays[day] = 'VAC';
-        }
-        if (emp.specialDays[day] === 'VAC') emp.specialDays[day] = 'VAC';
-        if (emp.specialDays[day] !== 'VAC') emp.specialDays[day] = undefined;
-        updateSpecialDayStyles();
-        handleScheduleChange();
-      };
-      rdoBtn.onclick = (e) => {
-        if (!isEditMode) return;
-        e.preventDefault();
-        emp.specialDays[day] = emp.specialDays[day] === 'RDO' ? undefined : 'RDO';
-        if (emp.specialDays[day]) {
-          off.checked = false;
-          emp.specialDays[day] = 'RDO';
-        }
-        if (emp.specialDays[day] === 'RDO') emp.specialDays[day] = 'RDO';
-        if (emp.specialDays[day] !== 'RDO') emp.specialDays[day] = undefined;
-        updateSpecialDayStyles();
-        handleScheduleChange();
-      };
-      statBtn.onclick = (e) => {
-        if (!isEditMode) return;
-        e.preventDefault();
-        emp.specialDays[day] = emp.specialDays[day] === 'STAT' ? undefined : 'STAT';
-        if (emp.specialDays[day]) {
-          off.checked = false;
-          emp.specialDays[day] = 'STAT';
-        }
-        if (emp.specialDays[day] === 'STAT') emp.specialDays[day] = 'STAT';
-        if (emp.specialDays[day] !== 'STAT') emp.specialDays[day] = undefined;
-        updateSpecialDayStyles();
-        handleScheduleChange();
-      };
-      off.addEventListener('change', () => {
-        if (!isEditMode) return;
-        if (off.checked) {
-          emp.specialDays[day] = 'OFF';
-          vacBtn.style.opacity = '0.5';
-          rdoBtn.style.opacity = '0.5';
-          statBtn.style.opacity = '0.5';
-        } else if (emp.specialDays[day] === 'OFF') {
-          emp.specialDays[day] = undefined;
-        }
-        updateSpecialDayStyles();
-        handleScheduleChange();
-      });
-      updateSpecialDayStyles();
-      // Shift time dropdowns
-      const startHour = document.createElement('select');
-      startHour.className = 'start-hour';
-      startHour.dataset.employee = emp.id;
-      startHour.dataset.day = day;
-      startHour.disabled = !isEditMode;
-      const startHourDefault = document.createElement('option');
-      startHourDefault.value = '';
-      startHourDefault.textContent = '--';
-      startHour.appendChild(startHourDefault);
-      for (let h = 1; h <= 12; h++) {
-        const opt = document.createElement('option');
-        opt.value = h;
-        opt.textContent = h;
-        startHour.appendChild(opt);
-      }
-      // Start min
-      const startMin = document.createElement('select');
-      startMin.className = 'start-min';
-      startMin.dataset.employee = emp.id;
-      startMin.dataset.day = day;
-      startMin.disabled = !isEditMode;
-      const startMinDefault = document.createElement('option');
-      startMinDefault.value = '';
-      startMinDefault.textContent = '--';
-      startMin.appendChild(startMinDefault);
-      ['00', '15', '30', '45'].forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m;
-        startMin.appendChild(opt);
-      });
-      // Start ampm
-      const startAmPm = document.createElement('select');
-      startAmPm.className = 'start-ampm';
-      startAmPm.dataset.employee = emp.id;
-      startAmPm.dataset.day = day;
-      startAmPm.disabled = !isEditMode;
-      const startAmPmDefault = document.createElement('option');
-      startAmPmDefault.value = '';
-      startAmPmDefault.textContent = '--';
-      startAmPm.appendChild(startAmPmDefault);
-      ['AM', 'PM'].forEach(ampm => {
-        const opt = document.createElement('option');
-        opt.value = ampm;
-        opt.textContent = ampm;
-        startAmPm.appendChild(opt);
-      });
-      // End hour
-      const endHour = document.createElement('select');
-      endHour.className = 'end-hour';
-      endHour.dataset.employee = emp.id;
-      endHour.dataset.day = day;
-      endHour.disabled = !isEditMode;
-      const endHourDefault = document.createElement('option');
-      endHourDefault.value = '';
-      endHourDefault.textContent = '--';
-      endHour.appendChild(endHourDefault);
-      for (let h = 1; h <= 12; h++) {
-        const opt = document.createElement('option');
-        opt.value = h;
-        opt.textContent = h;
-        endHour.appendChild(opt);
-      }
-      // End min
-      const endMin = document.createElement('select');
-      endMin.className = 'end-min';
-      endMin.dataset.employee = emp.id;
-      endMin.dataset.day = day;
-      endMin.disabled = !isEditMode;
-      const endMinDefault = document.createElement('option');
-      endMinDefault.value = '';
-      endMinDefault.textContent = '--';
-      endMin.appendChild(endMinDefault);
-      ['00', '15', '30', '45'].forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m;
-        endMin.appendChild(opt);
-      });
-      // End ampm
-      const endAmPm = document.createElement('select');
-      endAmPm.className = 'end-ampm';
-      endAmPm.dataset.employee = emp.id;
-      endAmPm.dataset.day = day;
-      endAmPm.disabled = !isEditMode;
-      const endAmPmDefault = document.createElement('option');
-      endAmPmDefault.value = '';
-      endAmPmDefault.textContent = '--';
-      endAmPm.appendChild(endAmPmDefault);
-      ['AM', 'PM'].forEach(ampm => {
-        const opt = document.createElement('option');
-        opt.value = ampm;
-        opt.textContent = ampm;
-        endAmPm.appendChild(opt);
-      });
-      // Set dropdowns from emp.schedule if present
-      let sched = emp.schedule[day];
-      if (sched && sched.length === 2) {
-        // Set start
-        let start = sched[0];
-        let end = sched[1];
-        let startH = Math.floor(start);
-        let startM = Math.round((start - startH) * 60).toString().padStart(2, '0');
-        let startA = startH >= 12 ? 'PM' : 'AM';
-        let startHourVal = startH % 12;
-        if (startHourVal === 0) startHourVal = 12;
-        startHour.value = startHourVal;
-        startMin.value = startM;
-        startAmPm.value = startA;
-        // Set end
-        let endH = Math.floor(end);
-        let endM = Math.round((end - endH) * 60).toString().padStart(2, '0');
-        let endA = endH >= 12 ? 'PM' : 'AM';
-        let endHourVal = endH % 12;
-        if (endHourVal === 0) endHourVal = 12;
-        endHour.value = endHourVal;
-        endMin.value = endM;
-        endAmPm.value = endA;
-      }
-      // When dropdowns change, update emp.schedule
-      function updateDayFromDropdowns() {
-        if (!isEditMode) return;
-        const sHour = startHour.value;
-        const sMin = startMin.value;
-        const sAmPm = startAmPm.value;
-        const eHour = endHour.value;
-        const eMin = endMin.value;
-        const eAmPm = endAmPm.value;
-        if (sHour && sMin && sAmPm && eHour && eMin && eAmPm) {
-          let sh = parseInt(sHour, 10);
-          let sm = parseInt(sMin, 10);
-          let eh = parseInt(eHour, 10);
-          let em = parseInt(eMin, 10);
-          let s24 = (sAmPm === 'PM' && sh !== 12 ? sh + 12 : sAmPm === 'AM' && sh === 12 ? 0 : sh) + sm / 60;
-          let e24 = (eAmPm === 'PM' && eh !== 12 ? eh + 12 : eAmPm === 'AM' && eh === 12 ? 0 : eh) + em / 60;
-          if (s24 !== e24) {
-            emp.schedule[day] = [s24, e24];
-          } else {
-            emp.schedule[day] = [];
-          }
-        } else {
-          emp.schedule[day] = [];
-        }
-        handleScheduleChange();
-        // Update only the availability preview for this cell
-        const availPreview = td.querySelector('.availability-preview');
-        if (availPreview) {
-          // Rebuild the preview using the same logic as in createScheduleTable
-          function readableTime(val) {
-            if (val === undefined || val === "" || val === null || isNaN(val)) return null;
-            let h = Math.floor(val);
-            let m = Math.round((val - h) * 60);
-            let ampm = h >= 12 ? 'PM' : 'AM';
-            let hour = h % 12;
-            if (hour === 0) hour = 12;
-            return `${hour}:${m.toString().padStart(2, '0')} ${ampm}`;
-          }
-          let hasConflict = false;
-          let startH = undefined, endH = undefined;
-          let invalidShift = false;
-          if (sHour && sMin && sAmPm && eHour && eMin && eAmPm) {
-            let sh = parseInt(sHour, 10);
-            let sm = parseInt(sMin, 10);
-            let eh = parseInt(eHour, 10);
-            let em = parseInt(eMin, 10);
-            startH = (sAmPm === 'PM' && sh !== 12 ? sh + 12 : sAmPm === 'AM' && sh === 12 ? 0 : sh) + sm / 60;
-            endH = (eAmPm === 'PM' && eh !== 12 ? eh + 12 : eAmPm === 'AM' && eh === 12 ? 0 : eh) + em / 60;
-            if (endH <= startH) {
-              invalidShift = true;
+      // For each department, check if there's a shift for this employee/day
+      let cellContent = '';
+      let cellStyle = '';
+      if (selectedDept === 'front_end') {
+        // Show all shifts for all departments, each with a colored border
+        let found = false;
+        Object.keys(departmentColors).forEach(dept => {
+          if (emp.schedulesByDept && emp.schedulesByDept[dept] && emp.schedulesByDept[dept][day] && emp.schedulesByDept[dept][day].length === 2) {
+            const sched = emp.schedulesByDept[dept][day];
+            const start = sched[0];
+            const end = sched[1];
+            if (end > start) {
+              found = true;
+              cellContent += `<div style='border-left: 6px solid ${departmentColors[dept]}; padding-left:6px; margin-bottom:2px;'>${readableTime(start)} – ${readableTime(end)} <span style='font-size:0.85em;color:#888;'>(${dept.replace('_',' ')})</span></div>`;
             }
           }
-          const allowedRanges = (availability[emp.id] && availability[emp.id][day]) ? availability[emp.id][day] : [];
-          if (startH !== undefined && endH !== undefined && endH > startH) {
-            const match = allowedRanges.some(([a, b]) => startH >= a && endH <= b);
-            if (!match && allowedRanges.length > 0) {
-              hasConflict = true;
-            }
-            if (allowedRanges.length === 0) {
-              hasConflict = true;
-            }
-          }
-          if (allowedRanges.length > 0) {
-            availPreview.innerHTML = allowedRanges.map(([a, b]) => {
-              if (a === 0 && b === 0) return '<span style="color:#b71c1c;">Not Available</span>';
-              const startStr = readableTime(a);
-              const endStr = readableTime(b);
-              if (startStr && endStr && a !== b) {
-                return `${startStr} - ${endStr}`;
-              } else {
-                return '<span style="color:#b71c1c;">Not Available</span>';
-              }
-            }).join('<br>');
-          } else {
-            availPreview.innerHTML = '<span style="color:#b71c1c;">Not Available</span>';
-          }
-          if (hasConflict || invalidShift) {
-            availPreview.innerHTML += ' ⚠️';
-          }
+        });
+        if (!found) {
+          cellContent = '';
         }
-      }
-      [startHour, startMin, startAmPm, endHour, endMin, endAmPm].forEach(el => {
-        el.addEventListener('change', updateDayFromDropdowns);
-      });
-      // Layout
-      const timeRow = document.createElement('div');
-      timeRow.className = 'time-range-row';
-      const startGroup = document.createElement('span');
-      startGroup.style.display = 'inline-flex';
-      startGroup.style.alignItems = 'center';
-      startGroup.appendChild(startHour);
-      const sep1 = document.createElement('span'); sep1.textContent = ':'; sep1.className = 'time-sep';
-      startGroup.appendChild(sep1);
-      startGroup.appendChild(startMin);
-      startGroup.appendChild(startAmPm);
-      const endGroup = document.createElement('span');
-      endGroup.style.display = 'inline-flex';
-      endGroup.style.alignItems = 'center';
-      endGroup.appendChild(endHour);
-      const sep2 = document.createElement('span'); sep2.textContent = ':'; sep2.className = 'time-sep';
-      endGroup.appendChild(sep2);
-      endGroup.appendChild(endMin);
-      endGroup.appendChild(endAmPm);
-      timeRow.appendChild(startGroup);
-      const dash = document.createElement('span'); dash.textContent = ' – '; dash.className = 'time-sep';
-      timeRow.appendChild(dash);
-      timeRow.appendChild(endGroup);
-      td.appendChild(timeRow);
-      // Special controls row
-      const controlsRow = document.createElement('div');
-      controlsRow.className = 'special-controls-row';
-      const offLabel = document.createElement('label');
-      offLabel.style.display = 'inline-flex';
-      offLabel.style.alignItems = 'center';
-      offLabel.style.gap = '2px';
-      offLabel.style.whiteSpace = 'nowrap';
-      offLabel.appendChild(off);
-      offLabel.appendChild(document.createTextNode('Off'));
-      controlsRow.appendChild(offLabel);
-      controlsRow.appendChild(rdoBtn);
-      controlsRow.appendChild(vacBtn);
-      if (emp.employmentType === 'full') controlsRow.appendChild(statBtn);
-      td.appendChild(controlsRow);
-      // --- Add Note Button ---
-      const noteBtn = document.createElement('button');
-      noteBtn.textContent = emp.notes && emp.notes[day] ? '📋' : '📝';
-      noteBtn.title = emp.notes && emp.notes[day] ? `Note: ${emp.notes[day]}` : 'Add Note';
-      
-      // More subtle styling for notes - noticeable but not overwhelming
-      if (emp.notes && emp.notes[day]) {
-        noteBtn.style = 'margin-top:4px;font-size:1em;cursor:pointer;border-radius:4px;padding:3px 6px;background:#e8f5e8;border:1px solid #4caf50;color:#2e7d32;font-weight:500;';
       } else {
-        noteBtn.style = 'margin-top:4px;font-size:0.9em;cursor:pointer;border-radius:4px;padding:2px 6px;background:#f0f0f0;border:1px solid #ccc;';
-      }
-      
-      noteBtn.disabled = !isEditMode;
-      noteBtn.onclick = (e) => {
-        if (!isEditMode) return;
-        e.preventDefault();
-        const note = prompt('Enter note for this day:', emp.notes && emp.notes[day] ? emp.notes[day] : '');
-        if (note !== null) {
-          if (!emp.notes) emp.notes = {};
-          if (note.trim() === '') {
-            delete emp.notes[day];
-          } else {
-            emp.notes[day] = note.trim();
-          }
-          handleScheduleChange();
-          createScheduleTable(); // Recreate to update visual styling
-        }
-      };
-      td.appendChild(noteBtn);
-      
-      // --- Delete Note Button (only show when note exists) ---
-      if (emp.notes && emp.notes[day]) {
-        const deleteNoteBtn = document.createElement('button');
-        deleteNoteBtn.textContent = '🗑️';
-        deleteNoteBtn.title = 'Delete Note';
-        deleteNoteBtn.style = 'margin-top:4px;margin-left:3px;font-size:0.9em;cursor:pointer;border-radius:4px;padding:2px 5px;background:#ffe8e8;border:1px solid #f44336;color:#d32f2f;';
-        deleteNoteBtn.disabled = !isEditMode;
-        deleteNoteBtn.onclick = (e) => {
-          if (!isEditMode) return;
-          e.preventDefault();
-          if (confirm(`Delete note "${emp.notes[day]}"?`)) {
-            delete emp.notes[day];
-            handleScheduleChange();
-            createScheduleTable(); // Recreate to update visual styling
-          }
-        };
-        td.appendChild(deleteNoteBtn);
-      }
-      // --- End Delete Note Button ---
-      // --- Availability Preview (below controlsRow) ---
-      const availPreview = document.createElement('div');
-      availPreview.className = 'availability-preview';
-      availPreview.style = 'font-size:0.92em;color:#888;margin-top:8px;font-style:italic;white-space:nowrap;';
-      function readableTime(val) {
-        if (val === undefined || val === "" || val === null || isNaN(val)) return null;
-        let h = Math.floor(val);
-        let m = Math.round((val - h) * 60);
-        let ampm = h >= 12 ? 'PM' : 'AM';
-        let hour = h % 12;
-        if (hour === 0) hour = 12;
-        return `${hour}:${m.toString().padStart(2, '0')} ${ampm}`;
-      }
-      
-      // Check for schedule conflict using current dropdowns if in edit mode
-      let hasConflict = false;
-      let startH = undefined, endH = undefined;
-      let invalidShift = false;
-      if (isEditMode) {
-        // Try to get dropdown values for this cell
-        const startHour = td.querySelector('select.start-hour');
-        const startMin = td.querySelector('select.start-min');
-        const startAmPm = td.querySelector('select.start-ampm');
-        const endHour = td.querySelector('select.end-hour');
-        const endMin = td.querySelector('select.end-min');
-        const endAmPm = td.querySelector('select.end-ampm');
-        if (startHour && startMin && startAmPm && endHour && endMin && endAmPm && startHour.value && startMin.value && startAmPm.value && endHour.value && endMin.value && endAmPm.value) {
-          startH = getTimeFromDropdowns(startHour, startMin, startAmPm);
-          endH = getTimeFromDropdowns(endHour, endMin, endAmPm);
-          if (endH <= startH) {
-            invalidShift = true;
-          }
-        }
-      } else if (emp.schedule && emp.schedule[day]) {
-        // Fallback to saved schedule
-        const scheduleTime = emp.schedule[day];
-        if (scheduleTime.start !== undefined && scheduleTime.end !== undefined) {
-          startH = scheduleTime.start;
-          endH = scheduleTime.end;
-          if (endH <= startH) {
-            invalidShift = true;
+        // Only show shifts for the selected department
+        if (emp.schedulesByDept && emp.schedulesByDept[selectedDept] && emp.schedulesByDept[selectedDept][day] && emp.schedulesByDept[selectedDept][day].length === 2) {
+          const sched = emp.schedulesByDept[selectedDept][day];
+          const start = sched[0];
+          const end = sched[1];
+          if (end > start) {
+            cellContent = `<div style='border-left: 6px solid ${departmentColors[selectedDept]}; padding-left:6px;'>${readableTime(start)} – ${readableTime(end)}</div>`;
           }
         }
       }
-      if (startH !== undefined && endH !== undefined && endH > startH) {
-        // Check if this time block is in allowed availability
-        const match = allowedRanges.some(([a, b]) => startH >= a && endH <= b);
-        if (!match && allowedRanges.length > 0) {
-          hasConflict = true;
-        }
-        if (allowedRanges.length === 0) {
-          hasConflict = true;
-        }
-      }
-      
-      if (allowedRanges.length > 0) {
-        availPreview.innerHTML = allowedRanges.map(([a, b]) => {
-          if (a === 0 && b === 0) return '<span style="color:#b71c1c;">Not Available</span>';
-          const startStr = readableTime(a);
-          const endStr = readableTime(b);
-          if (startStr && endStr && a !== b) {
-            return `${startStr} - ${endStr}`;
-          } else {
-            return '<span style="color:#b71c1c;">Not Available</span>';
-          }
-        }).join('<br>');
-      } else {
-        availPreview.innerHTML = '<span style="color:#b71c1c;">Not Available</span>';
-      }
-      
-      // Show warning if invalid shift or out of availability
-      if (invalidShift || hasConflict) {
-        availPreview.innerHTML += ' ⚠️';
-      }
-      
-      td.appendChild(availPreview);
-      // --- End availability preview ---
+      td.innerHTML = cellContent;
+      td.style = cellStyle;
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -1260,8 +822,10 @@ const departmentOptions = [
   { value: 'front_end', label: 'Front End' },
 ];
 
+// Helper to get current department
 function getCurrentDepartment() {
-  return localStorage.getItem('rona_department') || 'customer_service';
+  // Default to 'front_end' if not set
+  return localStorage.getItem('department') || 'front_end';
 }
 
 function setCurrentDepartment(dept) {
@@ -1965,3 +1529,12 @@ function commitAllScheduleInputs() {
     });
   });
 }
+
+// Department color map
+const departmentColors = {
+  'front_end': '#007aff',
+  'cash': '#1ec773',
+  'head_cashier': '#ffd600',
+  'loadout': '#ff8c00',
+  'customer_service': '#e53935'
+};
