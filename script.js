@@ -310,8 +310,8 @@ const storeHours = {
 function createScheduleTable() {
   const tbody = document.getElementById('schedule-body');
   tbody.innerHTML = '';
-  // Always show all employees
-  const dataSource = employees;
+  // Use unsavedEmployees in edit mode, employees otherwise
+  const dataSource = getActiveEmployees();
   const isEdit = isEditMode;
   const deptToShow = isEdit ? editDepartment : previewDepartment;
   dataSource.forEach((emp, idx) => {
@@ -549,7 +549,7 @@ async function saveEmployees() {
 async function saveData() {
   try {
     const schedules = {};
-    employees.forEach(emp => {
+    getActiveEmployees().forEach(emp => {
       schedules[emp.id] = {
         schedule: emp.schedule || {},
         specialDays: emp.specialDays || {},
