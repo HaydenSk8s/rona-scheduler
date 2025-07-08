@@ -409,9 +409,105 @@ function createScheduleTable() {
       if (isEdit) {
         // --- EDIT MODE: show controls for editDepartment only ---
         // Render dropdowns and special controls for the selected department
-        // (This is the original edit logic, restored)
-        // ...
-        // (Insert the original editable cell rendering logic here)
+        // Get or create schedulesByDept for this employee
+        if (!emp.schedulesByDept) emp.schedulesByDept = {};
+        if (!emp.schedulesByDept[editDepartment]) emp.schedulesByDept[editDepartment] = {};
+        const sched = emp.schedulesByDept[editDepartment][day] || [];
+        // Special day controls
+        const specialRow = document.createElement('div');
+        specialRow.className = 'special-controls-row';
+        // OFF button
+        const offBtn = document.createElement('button');
+        offBtn.textContent = 'OFF';
+        offBtn.type = 'button';
+        offBtn.className = 'off-btn';
+        offBtn.style = 'margin-right:4px;background:#f7f7f7;border:1px solid #e0e0e0;border-radius:6px;padding:2px 10px;cursor:pointer;';
+        offBtn.onclick = () => {
+          emp.schedulesByDept[editDepartment][day] = [];
+          handleScheduleChange();
+        };
+        specialRow.appendChild(offBtn);
+        // RDO button
+        const rdoBtn = document.createElement('button');
+        rdoBtn.textContent = 'RDO';
+        rdoBtn.type = 'button';
+        rdoBtn.className = 'rdo-btn';
+        rdoBtn.style = 'margin-right:4px;background:#e3f2fd;border:1px solid #90caf9;border-radius:6px;padding:2px 10px;cursor:pointer;';
+        rdoBtn.onclick = () => {
+          emp.schedulesByDept[editDepartment][day] = ['RDO'];
+          handleScheduleChange();
+        };
+        specialRow.appendChild(rdoBtn);
+        // VAC button
+        const vacBtn = document.createElement('button');
+        vacBtn.textContent = 'VAC';
+        vacBtn.type = 'button';
+        vacBtn.className = 'vac-btn';
+        vacBtn.style = 'margin-right:4px;background:#fff3e0;border:1px solid #ffb74d;border-radius:6px;padding:2px 10px;cursor:pointer;';
+        vacBtn.onclick = () => {
+          emp.schedulesByDept[editDepartment][day] = ['VAC'];
+          handleScheduleChange();
+        };
+        specialRow.appendChild(vacBtn);
+        // STAT button
+        const statBtn = document.createElement('button');
+        statBtn.textContent = 'STAT';
+        statBtn.type = 'button';
+        statBtn.className = 'stat-btn';
+        statBtn.style = 'margin-right:4px;background:#e8f5e9;border:1px solid #81c784;border-radius:6px;padding:2px 10px;cursor:pointer;';
+        statBtn.onclick = () => {
+          emp.schedulesByDept[editDepartment][day] = ['STAT'];
+          handleScheduleChange();
+        };
+        specialRow.appendChild(statBtn);
+        td.appendChild(specialRow);
+        // Time range dropdowns
+        const timeRow = document.createElement('div');
+        timeRow.className = 'time-range-row';
+        // Start hour
+        const startHour = document.createElement('select');
+        startHour.className = 'start-hour';
+        for (let h = 6; h <= 21; h++) {
+          const opt = document.createElement('option');
+          opt.value = h;
+          opt.textContent = h < 12 ? `${h} AM` : (h === 12 ? '12 PM' : `${h-12} PM`);
+          startHour.appendChild(opt);
+        }
+        // End hour
+        const endHour = document.createElement('select');
+        endHour.className = 'end-hour';
+        for (let h = 7; h <= 22; h++) {
+          const opt = document.createElement('option');
+          opt.value = h;
+          opt.textContent = h < 12 ? `${h} AM` : (h === 12 ? '12 PM' : `${h-12} PM`);
+          endHour.appendChild(opt);
+        }
+        // Set current values
+        if (sched.length === 2) {
+          startHour.value = sched[0];
+          endHour.value = sched[1];
+        } else {
+          startHour.value = '';
+          endHour.value = '';
+        }
+        // Change handlers
+        startHour.onchange = endHour.onchange = () => {
+          const s = parseInt(startHour.value);
+          const e = parseInt(endHour.value);
+          if (!isNaN(s) && !isNaN(e) && e > s) {
+            emp.schedulesByDept[editDepartment][day] = [s, e];
+          } else {
+            emp.schedulesByDept[editDepartment][day] = [];
+          }
+          handleScheduleChange();
+        };
+        timeRow.appendChild(startHour);
+        const sep = document.createElement('span');
+        sep.className = 'time-sep';
+        sep.textContent = '–';
+        timeRow.appendChild(sep);
+        timeRow.appendChild(endHour);
+        td.appendChild(timeRow);
       } else {
         // --- PREVIEW MODE: show colored shift blocks ---
         let cellContent = '';
