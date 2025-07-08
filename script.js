@@ -1795,7 +1795,7 @@ function renderPrintPreview() {
           cell = `${readableTime(scheduled[0])} – ${readableTime(scheduled[1])}`;
         } else if (allowedRanges.length === 0) {
           cell = '';
-          cellStyle = 'background:repeating-linear-gradient(45deg,#f3f3f3,#f3f3f3 12px,#bbb 12px,#bbb 24px);';
+          cellStyle = 'background:repeating-linear-gradient(45deg,#f3f3f3,#f3f3f3 4px,#bbb 4px,#bbb 8px);';
         } else {
           cell = '';
         }
