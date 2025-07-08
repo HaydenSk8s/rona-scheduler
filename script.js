@@ -97,6 +97,29 @@ function showMainContent() {
 
 // Initialize the app (moved from global scope)
 function initializeApp() {
+  // Setup preview department dropdown
+  const previewDeptSelect = document.getElementById('preview-department-switcher');
+  previewDeptSelect.value = 'all';
+  previewDepartment = 'all';
+  previewDeptSelect.addEventListener('change', (e) => {
+    previewDepartment = e.target.value;
+    createScheduleTable();
+    renderPrintPreview();
+    updateSummary();
+    highlightCoverage();
+  });
+
+  // Setup edit department dropdown (hidden by default)
+  const editDeptRow = document.getElementById('edit-dept-row');
+  const editDeptSelect = document.getElementById('edit-department-switcher');
+  editDeptRow.style.display = 'none';
+  editDepartment = null;
+  editDeptSelect.value = 'customer_service';
+  editDeptSelect.addEventListener('change', (e) => {
+    editDepartment = e.target.value;
+    createScheduleTable();
+  });
+
   // Department switcher setup
   const deptSelect = document.getElementById('department-switcher');
   if (deptSelect) {
@@ -218,6 +241,9 @@ function initializeApp() {
   // Edit/Save Week Button Logic
   document.getElementById('edit-week-btn').addEventListener('click', () => {
     setEditMode(true);
+    document.getElementById('edit-dept-row').style.display = '';
+    editDepartment = document.getElementById('edit-department-switcher').value;
+    createScheduleTable();
   });
   document.getElementById('save-week-btn').addEventListener('click', async () => {
     commitAllScheduleInputs();
@@ -225,6 +251,8 @@ function initializeApp() {
     await saveEmployees();
     await saveAvailability();
     setEditMode(false);
+    document.getElementById('edit-dept-row').style.display = 'none';
+    editDepartment = null;
     await saveData();
     createScheduleTable();
     updateSummary();
@@ -239,6 +267,8 @@ function initializeApp() {
     // Revert to last saved state
     unsavedEmployees = [];
     setEditMode(false);
+    document.getElementById('edit-dept-row').style.display = 'none';
+    editDepartment = null;
     // Reload data from server to ensure we have the last saved state
     loadData().then(() => {
       createScheduleTable();
@@ -282,7 +312,8 @@ function createScheduleTable() {
   tbody.innerHTML = '';
   // Always show all employees
   const dataSource = employees;
-  const selectedDept = getCurrentDepartment();
+  const isEdit = isEditMode;
+  const deptToShow = isEdit ? editDepartment : previewDepartment;
   dataSource.forEach((emp, idx) => {
     const tr = document.createElement('tr');
     const nameTd = document.createElement('td');
@@ -297,9 +328,9 @@ function createScheduleTable() {
     empTypeSelect.style = 'font-size:0.97em;padding:2px 8px;border-radius:6px;border:1px solid #e0e0e0;background:#f7f8fa;margin-right:6px;';
     empTypeSelect.innerHTML = '<option value="full">Full Time</option><option value="part">Part Time</option>';
     empTypeSelect.value = emp.employmentType;
-    empTypeSelect.disabled = !isEditMode;
+    empTypeSelect.disabled = !isEdit;
     empTypeSelect.addEventListener('change', e => {
-      if (!isEditMode) return;
+      if (!isEdit) return;
       emp.employmentType = e.target.value;
       createScheduleTable();
       // Re-render emojis after employment type change
@@ -315,9 +346,9 @@ function createScheduleTable() {
     nameInput.placeholder = 'Employee';
     nameInput.className = 'employee-name-input';
     nameInput.style = 'width:120px;height:36px;margin-right:14px;font-weight:600;font-size:1.05rem;border-radius:7px;border:1px solid #e0e0e0;padding:5px 10px;background:#f7f8fa;vertical-align:middle;line-height:1.3;box-sizing:border-box;';
-    nameInput.disabled = !isEditMode;
+    nameInput.disabled = !isEdit;
     nameInput.addEventListener('change', e => {
-      if (!isEditMode) return;
+      if (!isEdit) return;
       dataSource[idx].name = e.target.value.trim();
       // Preserve scroll position
       const scrollY = window.scrollY;
@@ -331,7 +362,7 @@ function createScheduleTable() {
       renderEmojis();
     });
     nameInput.addEventListener('input', e => {
-      if (!isEditMode) return;
+      if (!isEdit) return;
       dataSource[idx].name = e.target.value.trim();
     });
     nameTd.appendChild(nameInput);
@@ -340,9 +371,9 @@ function createScheduleTable() {
     availBtn.textContent = 'Edit Availability';
     availBtn.title = 'Edit Availability';
     availBtn.style = 'width:150px;height:36px;margin-left:14px;margin-top:7px;background:#f3f4f7;border:none;color:#007aff;font-size:1.05rem;cursor:pointer;border-radius:7px;padding:5px 10px;vertical-align:middle;line-height:1.3;box-sizing:border-box;display:inline-block;white-space:nowrap;';
-    availBtn.disabled = !isEditMode;
+    availBtn.disabled = !isEdit;
     availBtn.addEventListener('click', () => {
-      if (isEditMode) {
+      if (isEdit) {
         // Open modal first, then preserve scroll position and update table
         openAvailabilityModal(emp.id);
         const scrollY = window.scrollY;
@@ -358,9 +389,9 @@ function createScheduleTable() {
     removeBtn.innerHTML = 'Remove 🗑️';
     removeBtn.title = 'Remove Employee';
     removeBtn.style = 'margin-left:10px;margin-top:2px;background:none;border:none;color:#b71c1c;font-size:1.08rem;cursor:pointer;vertical-align:middle;padding:3px 8px;';
-    removeBtn.disabled = !isEditMode;
+    removeBtn.disabled = !isEdit;
     removeBtn.addEventListener('click', () => {
-      if (!isEditMode) return;
+      if (!isEdit) return;
       dataSource.splice(idx, 1);
       delete availability[emp.id];
       createScheduleTable();
@@ -379,7 +410,7 @@ function createScheduleTable() {
       // For each department, check if there's a shift for this employee/day
       let cellContent = '';
       let cellStyle = '';
-      if (selectedDept === 'front_end') {
+      if (deptToShow === 'all') {
         // Show all shifts for all departments, each with a colored border
         let found = false;
         Object.keys(departmentColors).forEach(dept => {
@@ -398,12 +429,12 @@ function createScheduleTable() {
         }
       } else {
         // Only show shifts for the selected department
-        if (emp.schedulesByDept && emp.schedulesByDept[selectedDept] && emp.schedulesByDept[selectedDept][day] && emp.schedulesByDept[selectedDept][day].length === 2) {
-          const sched = emp.schedulesByDept[selectedDept][day];
+        if (emp.schedulesByDept && emp.schedulesByDept[deptToShow] && emp.schedulesByDept[deptToShow][day] && emp.schedulesByDept[deptToShow][day].length === 2) {
+          const sched = emp.schedulesByDept[deptToShow][day];
           const start = sched[0];
           const end = sched[1];
           if (end > start) {
-            cellContent = `<div style='border-left: 6px solid ${departmentColors[selectedDept]}; padding-left:6px;'>${readableTime(start)} – ${readableTime(end)}</div>`;
+            cellContent = `<div style='border-left: 6px solid ${departmentColors[deptToShow]}; padding-left:6px;'>${readableTime(start)} – ${readableTime(end)}</div>`;
           }
         }
       }
