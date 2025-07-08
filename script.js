@@ -407,10 +407,10 @@ function createScheduleTable() {
     days.forEach((day) => {
       const td = document.createElement('td');
       if (isEdit) {
-        // --- RESTORED ORIGINAL EDITABLE CELL LAYOUT ---
-        if (!emp.schedulesByDept) emp.schedulesByDept = {};
-        if (!emp.schedulesByDept[editDepartment]) emp.schedulesByDept[editDepartment] = {};
-        let sched = emp.schedulesByDept[editDepartment][day] || [];
+        // --- FULLY REVERTED ORIGINAL EDITABLE CELL LAYOUT ---
+        if (!emp.schedule) emp.schedule = {};
+        if (!emp.specialDays) emp.specialDays = {};
+        if (!emp.notes) emp.notes = {};
         // Special day controls
         const specialRow = document.createElement('div');
         specialRow.className = 'special-controls-row';
@@ -420,7 +420,8 @@ function createScheduleTable() {
         offBtn.type = 'button';
         offBtn.className = 'off-btn';
         offBtn.onclick = () => {
-          emp.schedulesByDept[editDepartment][day] = ['OFF'];
+          emp.specialDays[day] = 'OFF';
+          emp.schedule[day] = [];
           handleScheduleChange();
         };
         specialRow.appendChild(offBtn);
@@ -430,7 +431,8 @@ function createScheduleTable() {
         rdoBtn.type = 'button';
         rdoBtn.className = 'rdo-btn';
         rdoBtn.onclick = () => {
-          emp.schedulesByDept[editDepartment][day] = ['RDO'];
+          emp.specialDays[day] = 'RDO';
+          emp.schedule[day] = [];
           handleScheduleChange();
         };
         specialRow.appendChild(rdoBtn);
@@ -440,7 +442,8 @@ function createScheduleTable() {
         vacBtn.type = 'button';
         vacBtn.className = 'vac-btn';
         vacBtn.onclick = () => {
-          emp.schedulesByDept[editDepartment][day] = ['VAC'];
+          emp.specialDays[day] = 'VAC';
+          emp.schedule[day] = [];
           handleScheduleChange();
         };
         specialRow.appendChild(vacBtn);
@@ -450,7 +453,8 @@ function createScheduleTable() {
         statBtn.type = 'button';
         statBtn.className = 'stat-btn';
         statBtn.onclick = () => {
-          emp.schedulesByDept[editDepartment][day] = ['STAT'];
+          emp.specialDays[day] = 'STAT';
+          emp.schedule[day] = [];
           handleScheduleChange();
         };
         specialRow.appendChild(statBtn);
@@ -513,10 +517,10 @@ function createScheduleTable() {
           endAmPm.appendChild(opt);
         });
         // Set current values if present
-        if (sched.length === 2) {
+        if (emp.schedule[day] && emp.schedule[day].length === 2) {
           // Convert decimal hours to hour/min/ampm
-          const s = sched[0];
-          const e = sched[1];
+          const s = emp.schedule[day][0];
+          const e = emp.schedule[day][1];
           let sHour = Math.floor(s) % 12 || 12;
           let sMin = (Math.round((s - Math.floor(s)) * 60)).toString().padStart(2, '0');
           let sAmPm = s >= 12 ? 'PM' : 'AM';
@@ -551,12 +555,13 @@ function createScheduleTable() {
             if (sHourVal === 12) s = (sAmPmVal === 'PM' ? 12 : 0) + sMinVal / 60;
             if (eHourVal === 12) e = (eAmPmVal === 'PM' ? 12 : 0) + eMinVal / 60;
             if (e > s) {
-              emp.schedulesByDept[editDepartment][day] = [s, e];
+              emp.schedule[day] = [s, e];
+              delete emp.specialDays[day];
             } else {
-              emp.schedulesByDept[editDepartment][day] = [];
+              emp.schedule[day] = [];
             }
           } else {
-            emp.schedulesByDept[editDepartment][day] = [];
+            emp.schedule[day] = [];
           }
           handleScheduleChange();
         }
@@ -579,12 +584,10 @@ function createScheduleTable() {
         notesInput.type = 'text';
         notesInput.placeholder = 'Notes';
         notesInput.className = 'notes-input';
-        notesInput.value = (emp.notesByDept && emp.notesByDept[editDepartment] && emp.notesByDept[editDepartment][day]) || '';
+        notesInput.value = emp.notes[day] || '';
         notesInput.style = 'width:90%;margin-top:4px;font-size:0.97em;padding:2px 8px;border-radius:6px;border:1px solid #e0e0e0;background:#f7f8fa;';
         notesInput.onchange = () => {
-          if (!emp.notesByDept) emp.notesByDept = {};
-          if (!emp.notesByDept[editDepartment]) emp.notesByDept[editDepartment] = {};
-          emp.notesByDept[editDepartment][day] = notesInput.value;
+          emp.notes[day] = notesInput.value;
           handleScheduleChange();
         };
         td.appendChild(notesInput);
