@@ -1455,10 +1455,10 @@ function openAvailabilityModal(employeeId, tempAvail) {
         if (startStr && endStr && ranges[0][0] !== ranges[0][1]) {
           previewHtml += `<div><b>${day}:</b> ${startStr} - ${endStr}</div>`;
         } else {
-          previewHtml += `<div><b>${day}:</b> <span style='color:#b71c1c;'>Not Available</span></div>`;
+          previewHtml += `<div><b>${day}:</b> <span style='color:#b71c1c;'>N/A</span></div>`;
         }
       } else {
-        previewHtml += `<div><b>${day}:</b> <span style='color:#b71c1c;'>Not Available</span></div>`;
+        previewHtml += `<div><b>${day}:</b> <span style='color:#b71c1c;'>N/A</span></div>`;
       }
     });
     previewDiv.innerHTML = previewHtml;
@@ -1794,7 +1794,7 @@ function renderPrintPreview() {
         if (scheduled && scheduled.length === 2) {
           cell = `${readableTime(scheduled[0])} – ${readableTime(scheduled[1])}`;
         } else if (allowedRanges.length === 0) {
-          cell = '';
+          cell = '<span style="color:#b71c1c;">N/A</span>';
         } else {
           cell = '';
         }
