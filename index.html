@@ -28,17 +28,6 @@
     </div>
     <div id="print-preview-section" style="width:90%;margin:0 auto 24px auto;text-align:center;">
       <h2 style="font-size:1.3rem;font-weight:600;margin-bottom:16px;">Printable Schedule Preview</h2>
-      <div style="margin-bottom:12px;">
-        <label for="preview-department-switcher" style="font-weight:600;margin-right:8px;">Preview Department:</label>
-        <select id="preview-department-switcher" style="font-size:1em;padding:4px 12px;border-radius:7px;border:1.5px solid #e0e0e0;background:#f7f8fa;">
-          <option value="all">All</option>
-          <option value="front_end">Front End</option>
-          <option value="cash">Cash</option>
-          <option value="head_cashier">Head Cashier</option>
-          <option value="loadout">Loadout</option>
-          <option value="customer_service">Customer Service</option>
-        </select>
-      </div>
       <div id="print-preview" style="background:#fff;border-radius:14px;box-shadow:0 2px 12px #0001;padding:24px 10px 24px 10px;display:inline-block;min-width:320px;max-width:100%;overflow-x:auto;"></div>
       <button id="print-btn" style="margin-top:18px;background:#007aff;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:1rem;cursor:pointer;box-shadow:0 2px 8px #007aff22;">Print Schedule</button>
     </div>
@@ -59,14 +48,6 @@
       <button id="edit-week-btn" style="margin-left:18px;background:#fff;color:#007a33;border:1.5px solid #007a33;padding:8px 18px;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600;">Edit Week</button>
       <button id="save-week-btn" style="display:none;margin-left:10px;background:#1ec773;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600;">Save Week</button>
       <button id="cancel-edit-btn" style="display:none;margin-left:10px;background:#fff;color:#b71c1c;border:1.5px solid #b71c1c;padding:8px 18px;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600;">Cancel Edit</button>
-    </div>
-    <div id="legend-row" style="width:90%;margin:0 auto 12px auto;text-align:left;display:flex;align-items:center;gap:18px;">
-      <span style="font-weight:600;">Legend:</span>
-      <span style="border-left:6px solid #007aff;padding-left:8px;">Front End</span>
-      <span style="border-left:6px solid #1ec773;padding-left:8px;">Cash</span>
-      <span style="border-left:6px solid #ffd600;padding-left:8px;">Head Cashier</span>
-      <span style="border-left:6px solid #ff8c00;padding-left:8px;">Loadout</span>
-      <span style="border-left:6px solid #e53935;padding-left:8px;">Customer Service</span>
     </div>
     <div id="warnings"></div>
     <table id="schedule-table">
