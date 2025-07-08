@@ -396,7 +396,7 @@ function createScheduleTable() {
         if (!found) {
           cellContent = '';
         }
-      } else {
+          } else {
         // Only show shifts for the selected department
         if (emp.schedulesByDept && emp.schedulesByDept[selectedDept] && emp.schedulesByDept[selectedDept][day] && emp.schedulesByDept[selectedDept][day].length === 2) {
           const sched = emp.schedulesByDept[selectedDept][day];
@@ -1213,13 +1213,13 @@ function openAvailabilityModal(employeeId, tempAvail) {
           setDropdownValue(endAmPm, 'PM');
         } else {
           // Sunday: 7:45am - 8:15pm
-          tempAvail[day] = [[7.75, 20.25]];
-          setDropdownValue(startHour, '7');
-          setDropdownValue(startMin, '45');
-          setDropdownValue(startAmPm, 'AM');
-          setDropdownValue(endHour, '8');
-          setDropdownValue(endMin, '15');
-          setDropdownValue(endAmPm, 'PM');
+        tempAvail[day] = [[7.75, 20.25]];
+        setDropdownValue(startHour, '7');
+        setDropdownValue(startMin, '45');
+        setDropdownValue(startAmPm, 'AM');
+        setDropdownValue(endHour, '8');
+        setDropdownValue(endMin, '15');
+        setDropdownValue(endAmPm, 'PM');
         }
       } else {
         // Weekdays: 6:45am - 9:15pm
@@ -1299,6 +1299,9 @@ function openAvailabilityModal(employeeId, tempAvail) {
 function renderPrintPreview() {
   const preview = document.getElementById('print-preview');
   if (!preview) return;
+  // Get selected department for preview
+  const previewDeptSel = document.getElementById('preview-department-switcher');
+  const previewDept = previewDeptSel ? previewDeptSel.value : 'all';
   // Helper for readable time
   function readableTime(val) {
     let h = Math.floor(val);
@@ -1319,7 +1322,6 @@ function renderPrintPreview() {
     end.setDate(start.getDate() + 6);
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
     html += `<div style='font-size:1.13em;font-weight:600;margin-bottom:10px;'>Week of ${start.toLocaleDateString(undefined, options)} – ${end.toLocaleDateString(undefined, options)}</div>`;
-    console.log('[DEBUG] renderPrintPreview: weekStartDate:', weekStartDate, 'range:', start.toLocaleDateString(undefined, options), '-', end.toLocaleDateString(undefined, options));
   }
   html += '<table class="preview-table">';
   html += '<thead>';
@@ -1340,12 +1342,27 @@ function renderPrintPreview() {
     // Calculate total hours for this employee
     let empTotal = 0;
     days.forEach(day => {
-      if (emp.specialDays && emp.specialDays[day] === 'OFF') return;
-      if (emp.schedule && Array.isArray(emp.schedule[day]) && emp.schedule[day].length === 2) {
-        const startH = emp.schedule[day][0];
-        const endH = emp.schedule[day][1];
-        if (endH > startH) {
-          empTotal += endH - startH;
+      // Sum all departments for 'all', or just the selected department
+      if (previewDept === 'all') {
+        if (emp.schedulesByDept) {
+          Object.keys(emp.schedulesByDept).forEach(dept => {
+            const sched = emp.schedulesByDept[dept] && emp.schedulesByDept[dept][day];
+            if (sched && sched.length === 2) {
+              const startH = sched[0];
+              const endH = sched[1];
+              if (endH > startH) {
+                empTotal += endH - startH;
+              }
+            }
+          });
+        }
+      } else {
+        if (emp.schedulesByDept && emp.schedulesByDept[previewDept] && emp.schedulesByDept[previewDept][day] && emp.schedulesByDept[previewDept][day].length === 2) {
+          const startH = emp.schedulesByDept[previewDept][day][0];
+          const endH = emp.schedulesByDept[previewDept][day][1];
+          if (endH > startH) {
+            empTotal += endH - startH;
+          }
         }
       }
     });
@@ -1353,54 +1370,67 @@ function renderPrintPreview() {
     days.forEach(day => {
       let cell = '';
       let cellStyle = '';
-      // Special days
-      if (emp.specialDays && emp.specialDays[day] === 'STAT') {
-        cell = '<span style="color:#007a33;font-weight:500;">STAT</span>';
-      } else if (emp.specialDays && emp.specialDays[day] === 'VAC') {
-        cell = '<span style="color:#ff8c00;font-weight:500;">VAC</span>';
-      } else if (emp.specialDays && emp.specialDays[day] === 'RDO') {
-        cell = '<span style="color:#007aff;font-weight:500;">RDO</span>';
-      } else if (emp.specialDays && emp.specialDays[day] === 'OFF') {
-        cell = '<span style="color:#b71c1c;font-weight:500;">OFF</span>';
-      } else {
-        // Use schedule data if present, otherwise show blank if not available
-        let scheduled = emp.schedule && emp.schedule[day];
-        const allowedRanges = (availability[emp.id] && availability[emp.id][day]) ? availability[emp.id][day] : [];
-        if (scheduled && scheduled.length === 2) {
-          cell = `${readableTime(scheduled[0])} – ${readableTime(scheduled[1])}`;
-        } else if (allowedRanges.length === 0) {
-          cell = '';
-          cellStyle = 'background:repeating-linear-gradient(45deg,#f3f3f3,#f3f3f3 4px,#bbb 4px,#bbb 8px);';
-        } else {
+      if (previewDept === 'all') {
+        // Show all shifts for all departments, each with a colored border
+        let found = false;
+        Object.keys(departmentColors).forEach(dept => {
+          if (emp.schedulesByDept && emp.schedulesByDept[dept] && emp.schedulesByDept[dept][day] && emp.schedulesByDept[dept][day].length === 2) {
+            const sched = emp.schedulesByDept[dept][day];
+            const start = sched[0];
+            const end = sched[1];
+            if (end > start) {
+              found = true;
+              cell += `<div style='border-left: 6px solid ${departmentColors[dept]}; padding-left:6px; margin-bottom:2px;'>${readableTime(start)} – ${readableTime(end)}</div>`;
+            }
+          }
+        });
+        if (!found) {
           cell = '';
         }
+      } else {
+        // Only show shifts for the selected department
+        if (emp.schedulesByDept && emp.schedulesByDept[previewDept] && emp.schedulesByDept[previewDept][day] && emp.schedulesByDept[previewDept][day].length === 2) {
+          const sched = emp.schedulesByDept[previewDept][day];
+          const start = sched[0];
+          const end = sched[1];
+          if (end > start) {
+            cell = `<div style='border-left: 6px solid ${departmentColors[previewDept]}; padding-left:6px;'>${readableTime(start)} – ${readableTime(end)}</div>`;
+          }
+        }
       }
-      // Add note if present
-      if (emp.notes && emp.notes[day]) {
-        cell = `<span style=\"font-style:italic;\">${cell}<br><span style=\"font-size:0.9em;color:#666;\">${emp.notes[day]}</span></span>`;
-        cellStyle = 'background: #f7f7f7; opacity: 0.75;';
-      } else if (cell && cell !== '' && cell.indexOf('background') === -1) {
-        // If cell has a shift and no note, make it bold
-        cell = `<span style=\"font-weight:600;\">${cell}</span>`;
-      }
-      html += `<td class=\"preview-td\" style=\"${cellStyle}\">${cell}</td>`;
+      html += `<td class="preview-td" style="${cellStyle}">${cell}</td>`;
     });
     html += '</tr>';
   });
-  // Add totals row at the bottom
+  // Add totals row at the bottom (sum logic can be similar to above)
   let grandTotal = 0;
   html += '<tr><th class="preview-th" style="background:#f3f4f7;">Totals</th>';
   days.forEach((day, i) => {
     let totalHours = 0;
     let employeesScheduled = 0;
     employees.forEach(emp => {
-      if (emp.specialDays && emp.specialDays[day] === 'OFF') return;
-      if (emp.schedule && Array.isArray(emp.schedule[day]) && emp.schedule[day].length === 2) {
-        const startH = emp.schedule[day][0];
-        const endH = emp.schedule[day][1];
-        if (endH > startH) {
-          totalHours += endH - startH;
-          employeesScheduled++;
+      if (previewDept === 'all') {
+        if (emp.schedulesByDept) {
+          Object.keys(emp.schedulesByDept).forEach(dept => {
+            const sched = emp.schedulesByDept[dept] && emp.schedulesByDept[dept][day];
+            if (sched && sched.length === 2) {
+              const startH = sched[0];
+              const endH = sched[1];
+              if (endH > startH) {
+                totalHours += endH - startH;
+                employeesScheduled++;
+              }
+            }
+          });
+        }
+      } else {
+        if (emp.schedulesByDept && emp.schedulesByDept[previewDept] && emp.schedulesByDept[previewDept][day] && emp.schedulesByDept[previewDept][day].length === 2) {
+          const startH = emp.schedulesByDept[previewDept][day][0];
+          const endH = emp.schedulesByDept[previewDept][day][1];
+          if (endH > startH) {
+            totalHours += endH - startH;
+            employeesScheduled++;
+          }
         }
       }
     });
