@@ -1804,6 +1804,9 @@ function renderPrintPreview() {
       if (emp.notes && emp.notes[day]) {
         cell = `<span style=\"font-style:italic;\">${cell}<br><span style=\"font-size:0.9em;color:#666;\">${emp.notes[day]}</span></span>`;
         cellStyle = 'background: #f7f7f7; opacity: 0.75;';
+      } else if (cell && cell !== '' && cell.indexOf('background') === -1) {
+        // If cell has a shift and no note, make it bold
+        cell = `<span style=\"font-weight:600;\">${cell}</span>`;
       }
       html += `<td class=\"preview-td\" style=\"${cellStyle}\">${cell}</td>`;
     });
